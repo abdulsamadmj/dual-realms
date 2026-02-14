@@ -1,3 +1,5 @@
+'use client';
+
 import dynamic from 'next/dynamic';
 
 const GameCanvas = dynamic(() => import('@/components/game-canvas'), {
