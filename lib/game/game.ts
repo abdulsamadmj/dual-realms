@@ -15,12 +15,12 @@ import { aabbOverlap } from './physics';
 export type GameState = 'menu' | 'playing' | 'win';
 
 // Solid tile types for collision
+// SPIKE is NOT solid - players fall into spikes and get reset
 const SOLID_TYPES_NORMAL = new Set([
   TileType.SOLID,
   TileType.WALL_GHOST,
   TileType.LOW_TUNNEL,
   TileType.LEDGE,
-  TileType.SPIKE,
 ]);
 
 const SOLID_TYPES_WITH_BRIDGE = new Set([
@@ -29,7 +29,6 @@ const SOLID_TYPES_WITH_BRIDGE = new Set([
   TileType.WALL_GHOST,
   TileType.LOW_TUNNEL,
   TileType.LEDGE,
-  TileType.SPIKE,
 ]);
 
 export class Game {
@@ -155,41 +154,18 @@ export class Game {
 
     // --- Interactions ---
 
-    // Knight pushing crates
+    // Check if any top-platform crate has fallen over a gap/spike
     for (const crate of this.crates) {
       if (crate.platform !== 'top') continue;
-      const knightBox = this.knight.getAABB();
-      const crateBox = crate.getAABB();
-
-      // Expanded collision check for pushing
-      const pushBox = {
-        x: knightBox.x + (this.knight.facingRight ? knightBox.width - 4 : -crateBox.width + 4),
-        y: knightBox.y,
-        width: crateBox.width,
-        height: knightBox.height,
-      };
-
-      if (aabbOverlap(pushBox, crateBox) && this.knight.grounded) {
-        if (this.knight.vx > 0 && this.knight.facingRight) {
-          crate.x += 2;
-        } else if (this.knight.vx < 0 && !this.knight.facingRight) {
-          crate.x -= 2;
-        }
-      }
-
-      // Check if crate falls into a gap
       const crateCol = Math.floor((crate.x + crate.width / 2) / TILE_SIZE);
       const crateRow = Math.floor((crate.y + crate.height) / TILE_SIZE);
-      if (crateRow < this.topGrid.length && crateCol < this.topGrid[0].length) {
+      if (crateRow >= 0 && crateRow < this.topGrid.length && crateCol >= 0 && crateCol < this.topGrid[0].length) {
         const belowTile = this.topGrid[crateRow]?.[crateCol];
-        if (belowTile === TileType.GAP || belowTile === TileType.EMPTY) {
-          // Check if crate is over a gap - let it fall to bottom platform
-          if (crate.y + crate.height >= (this.topGrid.length - 3) * TILE_SIZE && !crate.falling) {
+        if ((belowTile === TileType.GAP || belowTile === TileType.EMPTY || belowTile === TileType.SPIKE) && !crate.falling) {
+          if (crate.y + crate.height >= (this.topGrid.length - 3) * TILE_SIZE) {
             crate.falling = true;
-            // Transfer crate to bottom platform
             crate.platform = 'bottom';
-            crate.y = TILE_SIZE; // Start at top of bottom platform
-            // Place it at a useful horizontal position
+            crate.y = TILE_SIZE;
             crate.x = Math.max(TILE_SIZE, Math.min(crate.x, (this.bottomGrid[0].length - 2) * TILE_SIZE));
           }
         }

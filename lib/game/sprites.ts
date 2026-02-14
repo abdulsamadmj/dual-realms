@@ -1,6 +1,9 @@
 // ============================================================
 // Sprite Sheet Loader & Animator
 // ============================================================
+// Uses an offscreen canvas per frame to guarantee clean clipping
+// so adjacent frames on the sheet never bleed into the draw.
+// ============================================================
 
 export interface SpriteAnimation {
   row: number;
@@ -25,6 +28,9 @@ export class SpriteSheet {
   loaded: boolean = false;
   config: SpriteConfig;
 
+  // Pre-sliced frame canvases: frameCache[animKey][frameIndex]
+  private frameCache: Map<string, HTMLCanvasElement[]> = new Map();
+
   constructor(src: string, config: SpriteConfig) {
     this.config = config;
     this.image = new Image();
@@ -32,7 +38,44 @@ export class SpriteSheet {
     this.image.src = src;
     this.image.onload = () => {
       this.loaded = true;
+      this.sliceAllFrames();
     };
+  }
+
+  /**
+   * Pre-slice every frame into its own tiny canvas so we never
+   * sample pixels from neighbouring frames.
+   */
+  private sliceAllFrames(): void {
+    const anims: [string, SpriteAnimation][] = [];
+    for (const key of ['idle', 'run', 'attack', 'jump', 'crouch', 'death'] as const) {
+      const a = this.config[key];
+      if (a) anims.push([key, a as SpriteAnimation]);
+    }
+
+    for (const [key, anim] of anims) {
+      const frames: HTMLCanvasElement[] = [];
+      for (let i = 0; i < anim.frames; i++) {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = this.config.frameWidth;
+        offscreen.height = this.config.frameHeight;
+        const offCtx = offscreen.getContext('2d')!;
+        offCtx.imageSmoothingEnabled = false;
+
+        const sx = i * this.config.frameWidth;
+        const sy = anim.row * this.config.frameHeight;
+
+        offCtx.drawImage(
+          this.image,
+          sx, sy,
+          this.config.frameWidth, this.config.frameHeight,
+          0, 0,
+          this.config.frameWidth, this.config.frameHeight,
+        );
+        frames.push(offscreen);
+      }
+      this.frameCache.set(key, frames);
+    }
   }
 
   draw(
@@ -51,8 +94,7 @@ export class SpriteSheet {
     if (!anim) return;
 
     const frameIndex = frame % anim.frames;
-    const sx = frameIndex * this.config.frameWidth;
-    const sy = anim.row * this.config.frameHeight;
+    const cachedFrames = this.frameCache.get(animation);
 
     const drawWidth = this.config.frameWidth * scale;
     const drawHeight = this.config.frameHeight * scale;
@@ -60,24 +102,40 @@ export class SpriteSheet {
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    if (flipX) {
-      ctx.translate(x + drawWidth / 2, y);
-      ctx.scale(-1, 1);
-      ctx.drawImage(
-        this.image,
-        sx, sy,
-        this.config.frameWidth, this.config.frameHeight,
-        -drawWidth / 2, 0,
-        drawWidth, drawHeight
-      );
+    if (cachedFrames && cachedFrames[frameIndex]) {
+      // Use pre-sliced frame (no bleed from neighbours)
+      const frameTex = cachedFrames[frameIndex];
+      if (flipX) {
+        ctx.translate(x + drawWidth / 2, y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(frameTex, -drawWidth / 2, 0, drawWidth, drawHeight);
+      } else {
+        ctx.drawImage(frameTex, x, y, drawWidth, drawHeight);
+      }
     } else {
-      ctx.drawImage(
-        this.image,
-        sx, sy,
-        this.config.frameWidth, this.config.frameHeight,
-        x, y,
-        drawWidth, drawHeight
-      );
+      // Fallback: direct sheet draw (before cache is ready)
+      const sx = frameIndex * this.config.frameWidth;
+      const sy = anim.row * this.config.frameHeight;
+
+      if (flipX) {
+        ctx.translate(x + drawWidth / 2, y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(
+          this.image,
+          sx, sy,
+          this.config.frameWidth, this.config.frameHeight,
+          -drawWidth / 2, 0,
+          drawWidth, drawHeight,
+        );
+      } else {
+        ctx.drawImage(
+          this.image,
+          sx, sy,
+          this.config.frameWidth, this.config.frameHeight,
+          x, y,
+          drawWidth, drawHeight,
+        );
+      }
     }
 
     ctx.restore();

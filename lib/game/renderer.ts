@@ -146,16 +146,35 @@ function drawDoor(ctx: CanvasRenderingContext2D, x: number, y: number): void {
 }
 
 function drawSpikeTile(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-  ctx.fillStyle = '#5C4033';
+  // Dark pit base
+  ctx.fillStyle = '#1a1012';
   ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-  // Spike teeth at bottom
-  ctx.fillStyle = '#3E2723';
-  for (let i = 0; i < TILE_SIZE; i += 8) {
+
+  // Metal spikes pointing UP from the tile
+  const spikeCount = 4;
+  const spikeW = TILE_SIZE / spikeCount;
+  for (let i = 0; i < spikeCount; i++) {
+    const sx = x + i * spikeW;
+    // Spike body (silver)
+    ctx.fillStyle = '#AAA';
     ctx.beginPath();
-    ctx.moveTo(x + i, y + TILE_SIZE);
-    ctx.lineTo(x + i + 4, y + TILE_SIZE - 8);
-    ctx.lineTo(x + i + 8, y + TILE_SIZE);
+    ctx.moveTo(sx, y + TILE_SIZE);
+    ctx.lineTo(sx + spikeW / 2, y + 4);
+    ctx.lineTo(sx + spikeW, y + TILE_SIZE);
+    ctx.closePath();
     ctx.fill();
+    // Tip highlight
+    ctx.fillStyle = '#EEE';
+    ctx.beginPath();
+    ctx.moveTo(sx + spikeW / 2 - 1, y + 6);
+    ctx.lineTo(sx + spikeW / 2, y + 4);
+    ctx.lineTo(sx + spikeW / 2 + 1, y + 6);
+    ctx.lineTo(sx + spikeW / 2, y + 12);
+    ctx.closePath();
+    ctx.fill();
+    // Blood-red drip at tip
+    ctx.fillStyle = '#CC3333';
+    ctx.fillRect(sx + spikeW / 2 - 1, y + 4, 2, 3);
   }
 }
 
