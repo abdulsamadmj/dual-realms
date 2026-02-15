@@ -14,7 +14,6 @@ export const PORTAL_COOLDOWN = 4000;  // ms
 // Canvas dimensions
 export const CANVAS_WIDTH = 800;
 export const CANVAS_HEIGHT = 600;
-export const HALF_HEIGHT = CANVAS_HEIGHT / 2;
 
 // Sprite sheet configurations
 export const KNIGHT_SPRITE = {
@@ -49,14 +48,14 @@ export enum TileType {
   CRATE = 5,          // Movable crate
   LOW_TUNNEL = 6,     // Requires crouching
   WALL_GHOST = 7,     // Knight can ghost through
-  GAP = 8,            // Gap where crate can fall
+  GAP = 8,            // Open gap
   PORTAL_ZONE = 9,    // Area for portal placement
   LEDGE = 10,         // Higher platform
   SPIKE = 11,         // Deadly spikes - resets player
-  BUTTON_KNIGHT = 12, // Pressure plate the Knight stands on -> affects bottom
-  BUTTON_THIEF = 13,  // Pressure plate the Thief stands on -> affects top
-  RETRACT_WALL = 14,  // Wall that retracts when button is active
-  MOVING_PLAT = 15,   // Moving platform toggled by other player's button
+  BUTTON_KNIGHT = 12, // Pressure plate the Knight stands on
+  BUTTON_THIEF = 13,  // Pressure plate the Thief stands on
+  RETRACT_WALL_A = 14, // Retracts when Knight button is pressed
+  RETRACT_WALL_B = 15, // Retracts when Thief button is pressed
 }
 
 // Colors for tile rendering
@@ -72,6 +71,6 @@ export const TILE_COLORS: Record<number, string> = {
   [TileType.SPIKE]: '#4a3728',
   [TileType.BUTTON_KNIGHT]: '#CC4444',
   [TileType.BUTTON_THIEF]: '#44AA88',
-  [TileType.RETRACT_WALL]: '#887744',
-  [TileType.MOVING_PLAT]: '#4488CC',
+  [TileType.RETRACT_WALL_A]: '#887744',
+  [TileType.RETRACT_WALL_B]: '#448877',
 };

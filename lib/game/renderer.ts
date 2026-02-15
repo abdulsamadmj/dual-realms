@@ -1,9 +1,10 @@
 // ============================================================
-// Renderer - Draws the game world, HUD, menus, pause screen
+// Renderer - Single shared world, HUD, menus, pause screen
 // ============================================================
 
-import { TILE_SIZE, TileType, CANVAS_WIDTH, CANVAS_HEIGHT, HALF_HEIGHT } from './constants';
+import { TILE_SIZE, TileType, CANVAS_WIDTH, CANVAS_HEIGHT } from './constants';
 import type { Crate, Player, GameWorldState } from './entities';
+import type { Knight, Thief } from './entities';
 import type { KeyBindings } from './input';
 import { keyDisplayName } from './input';
 
@@ -21,12 +22,13 @@ function drawTile(ctx: CanvasRenderingContext2D, type: number, x: number, y: num
     case TileType.WALL_GHOST: drawGhostWall(ctx, px, py); break;
     case TileType.LEVER: drawLever(ctx, px, py, gameState.leverPulled); break;
     case TileType.DOOR: drawDoor(ctx, px, py); break;
-    case TileType.LOW_TUNNEL: drawStoneTile(ctx, px, py); break;
+    case TileType.LOW_TUNNEL: drawLowTunnel(ctx, px, py); break;
     case TileType.LEDGE: drawStoneTile(ctx, px, py); break;
     case TileType.SPIKE: drawSpikeTile(ctx, px, py); break;
     case TileType.BUTTON_KNIGHT: drawButtonTile(ctx, px, py, '#CC4444', gameState.knightOnButton); break;
     case TileType.BUTTON_THIEF: drawButtonTile(ctx, px, py, '#44AA88', gameState.thiefOnButton); break;
-    case TileType.RETRACT_WALL: drawRetractWall(ctx, px, py, gameState); break;
+    case TileType.RETRACT_WALL_A: drawRetractWall(ctx, px, py, '#887744', gameState.knightOnButton); break;
+    case TileType.RETRACT_WALL_B: drawRetractWall(ctx, px, py, '#448877', gameState.thiefOnButton); break;
     default: break;
   }
 }
@@ -44,6 +46,20 @@ function drawStoneTile(ctx: CanvasRenderingContext2D, x: number, y: number): voi
   ctx.fillRect(x + 8, y + 8, 4, 4);
   ctx.fillRect(x + 20, y + 16, 4, 4);
   ctx.fillRect(x + 4, y + 20, 3, 3);
+}
+
+function drawLowTunnel(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.fillStyle = '#5C4033';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Darker stripe to show it's a low ceiling
+  ctx.fillStyle = '#3E2723';
+  ctx.fillRect(x, y, TILE_SIZE, 6);
+  ctx.fillStyle = '#4E3A2A';
+  ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, 2);
+  // Warning marks
+  ctx.fillStyle = '#FFAA0044';
+  ctx.fillRect(x + 4, y + TILE_SIZE - 6, 8, 2);
+  ctx.fillRect(x + 20, y + TILE_SIZE - 6, 8, 2);
 }
 
 function drawBridgeTile(ctx: CanvasRenderingContext2D, x: number, y: number): void {
@@ -142,21 +158,14 @@ function drawSpikeTile(ctx: CanvasRenderingContext2D, x: number, y: number): voi
 }
 
 function drawButtonTile(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, pressed: boolean): void {
-  // Ground underneath
   drawStoneTile(ctx, x, y);
-
-  // Button plate on top of the ground
   const plateH = pressed ? 3 : 8;
   const plateY = y + TILE_SIZE - plateH;
-
   ctx.fillStyle = color;
   ctx.fillRect(x + 4, plateY, TILE_SIZE - 8, plateH);
-
-  // Highlight
   ctx.fillStyle = '#FFFFFF44';
   ctx.fillRect(x + 5, plateY, TILE_SIZE - 10, 2);
 
-  // Glow when pressed
   if (pressed) {
     ctx.save();
     ctx.shadowColor = color;
@@ -165,41 +174,32 @@ function drawButtonTile(ctx: CanvasRenderingContext2D, x: number, y: number, col
     ctx.fillRect(x + 2, plateY - 2, TILE_SIZE - 4, plateH + 4);
     ctx.restore();
   }
-
-  // Arrow indicator showing it affects the other platform
-  const time = Date.now() / 400;
-  const bounce = Math.sin(time) * 2;
-  ctx.fillStyle = color;
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(pressed ? 'ON' : 'STEP', x + TILE_SIZE / 2, y + 12 + bounce);
-  ctx.textAlign = 'left';
 }
 
-function drawRetractWall(ctx: CanvasRenderingContext2D, x: number, y: number, gameState: GameWorldState): void {
-  // These walls are visible when the corresponding button is NOT pressed.
-  // We check: is this in the top grid or bottom grid?
-  // Top grid RW retracts when thiefOnButton = true
-  // Bottom grid RW retracts when knightOnButton = true
-  // The game controller handles this by modifying solid types, but we still
-  // need to render them. The game.ts will tell us via gameState whether to show.
-  // For now, always draw them - the game controller will skip collision.
+function drawRetractWall(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, retracted: boolean): void {
+  if (retracted) {
+    // Draw ghost outline showing it's retracted
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+    ctx.setLineDash([]);
+    ctx.restore();
+    return;
+  }
+
   const time = Date.now() / 300;
-  const alpha = 0.9;
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-
-  // Mechanical wall look
-  ctx.fillStyle = '#887744';
+  ctx.fillStyle = color;
   ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-
-  // Gear pattern
-  ctx.fillStyle = '#776633';
+  ctx.fillStyle = '#00000033';
   ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
 
-  // Moving gears
-  ctx.fillStyle = '#998855';
+  // Gear pattern
+  ctx.fillStyle = '#FFFFFF22';
   const gearAngle = time * 2;
   for (let g = 0; g < 4; g++) {
     const gx = x + TILE_SIZE / 2 + Math.cos(gearAngle + g * 1.57) * 8;
@@ -208,7 +208,7 @@ function drawRetractWall(ctx: CanvasRenderingContext2D, x: number, y: number, ga
   }
 
   // Warning stripes
-  ctx.strokeStyle = '#FFAA0066';
+  ctx.strokeStyle = '#FFAA0044';
   ctx.lineWidth = 2;
   for (let i = 0; i < TILE_SIZE; i += 8) {
     ctx.beginPath();
@@ -216,56 +216,63 @@ function drawRetractWall(ctx: CanvasRenderingContext2D, x: number, y: number, ga
     ctx.lineTo(x + i + 8, y + TILE_SIZE);
     ctx.stroke();
   }
-
-  ctx.restore();
 }
 
 // ---- Background ----
 
-function drawBackground(ctx: CanvasRenderingContext2D, y: number, height: number, isTop: boolean): void {
-  const gradient = ctx.createLinearGradient(0, y, 0, y + height);
-  if (isTop) {
-    gradient.addColorStop(0, '#1a1a2e');
-    gradient.addColorStop(1, '#16213e');
-  } else {
-    gradient.addColorStop(0, '#0f3460');
-    gradient.addColorStop(1, '#1a1a2e');
-  }
+function drawBackground(ctx: CanvasRenderingContext2D, worldW: number, worldH: number): void {
+  const gradient = ctx.createLinearGradient(0, 0, 0, worldH);
+  gradient.addColorStop(0, '#0d0d20');
+  gradient.addColorStop(0.4, '#1a1a2e');
+  gradient.addColorStop(1, '#16213e');
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, y, CANVAS_WIDTH, height);
+  ctx.fillRect(0, 0, worldW, worldH);
 
+  // Torches
   ctx.fillStyle = '#FF660044';
   const torchSpacing = 160;
-  for (let tx = 80; tx < CANVAS_WIDTH; tx += torchSpacing) {
+  for (let tx = 80; tx < worldW; tx += torchSpacing) {
     const flicker = Math.sin(Date.now() / 200 + tx) * 2;
     ctx.beginPath();
-    ctx.arc(tx, y + 40 + flicker, 6, 0, Math.PI * 2);
+    ctx.arc(tx, 60 + flicker, 6, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
-// ---- Main Render Functions ----
+// ---- Main render: single world view ----
 
-export function renderPlatform(
+export function renderWorld(
   ctx: CanvasRenderingContext2D,
   grid: number[][],
-  player: Player,
+  knight: Knight,
+  thief: Thief,
   crates: Crate[],
   gameState: GameWorldState,
-  offsetY: number,
-  isTop: boolean,
   doorPos: { x: number; y: number },
 ): void {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, offsetY, CANVAS_WIDTH, HALF_HEIGHT);
-  ctx.clip();
-  const cameraX = Math.max(0, player.x - CANVAS_WIDTH / 3);
-  ctx.translate(-cameraX, offsetY);
-  drawBackground(ctx, 0, HALF_HEIGHT, isTop);
+  const worldW = (grid[0]?.length ?? 0) * TILE_SIZE;
+  const worldH = grid.length * TILE_SIZE;
 
-  for (let row = 0; row < grid.length; row++) {
-    for (let col = 0; col < grid[row].length; col++) {
+  // Camera follows midpoint of both players, clamped to world bounds
+  const midX = (knight.x + thief.x) / 2;
+  const midY = (knight.y + thief.y) / 2;
+  const camX = Math.max(0, Math.min(midX - CANVAS_WIDTH / 2, worldW - CANVAS_WIDTH));
+  const camY = Math.max(0, Math.min(midY - CANVAS_HEIGHT / 2, worldH - CANVAS_HEIGHT));
+
+  ctx.save();
+  ctx.translate(-camX, -camY);
+
+  drawBackground(ctx, worldW, worldH);
+
+  // Draw tiles
+  // Only draw tiles in visible range for performance
+  const startCol = Math.max(0, Math.floor(camX / TILE_SIZE) - 1);
+  const endCol = Math.min((grid[0]?.length ?? 0) - 1, Math.ceil((camX + CANVAS_WIDTH) / TILE_SIZE) + 1);
+  const startRow = Math.max(0, Math.floor(camY / TILE_SIZE) - 1);
+  const endRow = Math.min(grid.length - 1, Math.ceil((camY + CANVAS_HEIGHT) / TILE_SIZE) + 1);
+
+  for (let row = startRow; row <= endRow; row++) {
+    for (let col = startCol; col <= endCol; col++) {
       const type = grid[row][col];
       if (type !== TileType.EMPTY) {
         drawTile(ctx, type, col, row, gameState);
@@ -273,16 +280,42 @@ export function renderPlatform(
     }
   }
 
+  // Draw door
   drawDoor(ctx, doorPos.x, doorPos.y);
+
+  // Draw crates
   for (const crate of crates) crate.draw(ctx);
-  player.draw(ctx);
+
+  // Draw players
+  knight.draw(ctx);
+  thief.draw(ctx);
+
   ctx.restore();
-  player.drawHUD(ctx, offsetY);
+
+  // HUD (fixed screen position)
+  knight.drawHUD(ctx, 10);
+  thief.drawHUD(ctx, CANVAS_WIDTH - 200);
+
+  // Door status
+  renderDoorStatus(ctx, knight, thief);
 }
 
-export function renderSplitLine(ctx: CanvasRenderingContext2D): void {
-  ctx.fillStyle = '#FFD700';
-  ctx.fillRect(0, HALF_HEIGHT - 1, CANVAS_WIDTH, 2);
+function renderDoorStatus(ctx: CanvasRenderingContext2D, knight: Knight, thief: Thief): void {
+  ctx.save();
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+
+  const y = CANVAS_HEIGHT - 14;
+  const knightOk = knight.reachedDoor;
+  const thiefOk = thief.reachedDoor;
+
+  ctx.fillStyle = knightOk ? '#44FF44' : '#CC4444';
+  ctx.fillText(knightOk ? 'KNIGHT: AT DOOR' : 'KNIGHT: Find the door', CANVAS_WIDTH / 2 - 110, y);
+
+  ctx.fillStyle = thiefOk ? '#44FF44' : '#44AA88';
+  ctx.fillText(thiefOk ? 'THIEF: AT DOOR' : 'THIEF: Find the door', CANVAS_WIDTH / 2 + 110, y);
+
+  ctx.restore();
 }
 
 // ---- Menu ----
@@ -343,17 +376,17 @@ export function renderMenu(ctx: CanvasRenderingContext2D): void {
   ctx.fillText('-- CONTROLS --', centerX, centerY + 70);
   ctx.font = '11px monospace';
   ctx.fillStyle = '#CC4444';
-  ctx.fillText('KNIGHT (Top Platform)', centerX, centerY + 95);
+  ctx.fillText('KNIGHT', centerX, centerY + 95);
   ctx.fillStyle = '#999';
   ctx.fillText('WASD to Move  |  SHIFT to Activate Ghost Mode', centerX, centerY + 112);
   ctx.fillStyle = '#44AA88';
-  ctx.fillText('THIEF (Bottom Platform)', centerX, centerY + 140);
+  ctx.fillText('THIEF', centerX, centerY + 140);
   ctx.fillStyle = '#999';
   ctx.fillText('Arrow Keys to Move  |  DOWN to Crouch  |  ENTER for Portal', centerX, centerY + 157);
   ctx.fillStyle = '#FFD70088';
   ctx.font = '10px monospace';
-  ctx.fillText('Stand on pressure plates to help the other player!', centerX, centerY + 182);
-  ctx.fillText('Both players must reach the golden door to complete the level', centerX, centerY + 196);
+  ctx.fillText('Work together! Stand on pressure plates to open paths.', centerX, centerY + 182);
+  ctx.fillText('Both players must reach the golden door to win.', centerX, centerY + 196);
 }
 
 // ---- Win screen ----
@@ -411,14 +444,11 @@ export function renderPauseMenu(
   bindings: KeyBindings,
   rebindingKey: string | null,
 ): void {
-  // Dim overlay
   ctx.save();
   ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   const centerX = CANVAS_WIDTH / 2;
-
-  // Panel background
   const panelW = 420;
   const panelH = tab === 'controls' ? 380 : 240;
   const panelX = centerX - panelW / 2;
@@ -430,7 +460,6 @@ export function renderPauseMenu(
   ctx.lineWidth = 2;
   ctx.strokeRect(panelX, panelY, panelW, panelH);
 
-  // Title
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 24px monospace';
   ctx.textAlign = 'center';
@@ -538,10 +567,9 @@ function renderPauseControls(
     ['Crouch', 'p2Crouch'],
   ];
 
-  const thiefStartRow = row;
   for (const [label, key] of thiefBinds) {
     const y = startY + 20 + row * 26;
-    const isSelected = selected === (row - 1); // -1 because we skipped the header
+    const isSelected = selected === (row - 1);
     const isRebinding = rebindingKey === key;
 
     if (isSelected) {
@@ -585,13 +613,11 @@ function renderPauseControls(
   ctx.fillText('ENTER to rebind  |  ESC to go back', cx, backY + 30);
 }
 
-// ---- Tutorial hints ----
+// ---- Tutorial hints (shown at bottom of screen) ----
 
 export function renderTutorialHints(
   ctx: CanvasRenderingContext2D,
   gameState: GameWorldState,
-  knightX: number,
-  thiefX: number,
 ): void {
   ctx.save();
   ctx.font = '10px monospace';
@@ -599,37 +625,31 @@ export function renderTutorialHints(
   const alpha = 0.6 + Math.sin(Date.now() / 500) * 0.2;
   ctx.globalAlpha = alpha;
 
-  // Knight hints (top half)
-  if (!gameState.bridgeActive) {
-    ctx.fillStyle = '#FFAA44';
-    ctx.fillText('Wait for the bridge! The Thief must pull the lever below.', CANVAS_WIDTH / 2, HALF_HEIGHT - 16);
-  } else if (knightX < 350) {
-    ctx.fillStyle = '#88CCFF';
-    ctx.fillText('Press SHIFT to activate Ghost Mode and walk through purple walls!', CANVAS_WIDTH / 2, HALF_HEIGHT - 16);
-  } else if (knightX < 500) {
-    ctx.fillStyle = '#CC4444';
-    ctx.fillText('Stand on the RED pressure plate to help the Thief below!', CANVAS_WIDTH / 2, HALF_HEIGHT - 16);
-  } else if (knightX < 600) {
-    ctx.fillStyle = '#44AA88';
-    ctx.fillText('The Thief needs to stand on the GREEN plate to open your path!', CANVAS_WIDTH / 2, HALF_HEIGHT - 16);
+  let hint = '';
+  let color = '#FFAA44';
+
+  if (!gameState.leverPulled) {
+    hint = 'Explore together! The Thief can crouch under low ceilings. Find the lever to open the bridge.';
+    color = '#FFAA44';
+  } else if (!gameState.knightOnButton && !gameState.thiefOnButton) {
+    hint = 'Stand on pressure plates to open paths for each other! Ghost walls block only the Knight normally.';
+    color = '#88CCFF';
+  } else if (gameState.knightOnButton) {
+    hint = 'Knight plate active! Thief path ahead is open - go now!';
+    color = '#CC4444';
+  } else if (gameState.thiefOnButton) {
+    hint = 'Thief plate active! Knight path ahead is open - go now!';
+    color = '#44AA88';
   }
 
-  // Thief hints (bottom half)
-  if (!gameState.leverPulled && thiefX < 200) {
-    ctx.fillStyle = '#FFAA44';
-    ctx.fillText('Press DOWN to crouch and fit through the low tunnel ahead!', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 8);
-  } else if (!gameState.leverPulled) {
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText('Walk to the lever to pull it and help the Knight!', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 8);
-  } else if (thiefX < 320) {
-    ctx.fillStyle = '#44AA88';
-    ctx.fillText('Stand on the GREEN pressure plate to help the Knight above!', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 8);
-  } else if (thiefX < 500) {
-    ctx.fillStyle = '#CC4444';
-    ctx.fillText('The Knight needs to stand on the RED plate to open your path!', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 8);
-  } else {
-    ctx.fillStyle = '#FF6600';
-    ctx.fillText('Press ENTER to place portals and cross the gap!', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 8);
+  if (hint) {
+    // Background bar
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#00000088';
+    ctx.fillRect(0, CANVAS_HEIGHT - 22, CANVAS_WIDTH, 22);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillText(hint, CANVAS_WIDTH / 2, CANVAS_HEIGHT - 7);
   }
 
   ctx.restore();

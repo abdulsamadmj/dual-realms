@@ -1,5 +1,5 @@
 // ============================================================
-// Level Data - Tutorial Level
+// Level Data - Single shared platform
 // ============================================================
 
 import { TileType } from './constants';
@@ -7,79 +7,71 @@ import { TileType } from './constants';
 const _ = TileType.EMPTY;
 const S = TileType.SOLID;
 const L = TileType.LEVER;
-const G = TileType.GAP;
 const T = TileType.LOW_TUNNEL;
 const W = TileType.WALL_GHOST;
 const H = TileType.LEDGE;
 const K = TileType.SPIKE;
-const BK = TileType.BUTTON_KNIGHT;  // Knight pressure plate -> affects bottom
-const BT = TileType.BUTTON_THIEF;   // Thief pressure plate -> affects top
-const RW = TileType.RETRACT_WALL;   // Retracts when button pressed
+const BK = TileType.BUTTON_KNIGHT;   // Knight plate -> retracts RA walls
+const BT = TileType.BUTTON_THIEF;    // Thief plate -> retracts RB walls
+const RA = TileType.RETRACT_WALL_A;  // Opens when Knight steps on BK
+const RB = TileType.RETRACT_WALL_B;  // Opens when Thief steps on BT
 
 export interface LevelData {
-  topGrid: number[][];
-  bottomGrid: number[][];
+  grid: number[][];
   knightSpawn: { x: number; y: number };
   thiefSpawn: { x: number; y: number };
-  topDoor: { x: number; y: number };
-  bottomDoor: { x: number; y: number };
-  cratePositions: { x: number; y: number; platform: 'top' | 'bottom' }[];
+  doorPos: { x: number; y: number };
+  cratePositions: { x: number; y: number }[];
   leverPosition: { x: number; y: number };
   bridgePositions: { x: number; y: number }[];
-  // Cross-platform interactions:
-  // When Knight stands on BK in top grid -> retract RW tiles in bottom grid
-  // When Thief stands on BT in bottom grid -> retract RW tiles in top grid
 }
 
-// Tutorial Level - 25 cols x 9 rows per platform
+// Single shared level - 40 cols x 18 rows
+// Both players navigate the SAME world.
+// Knight: ghost through purple (W) walls
+// Thief: crouch through low tunnels (T), use portals to cross gaps
+// Pressure plates: Knight stands on BK -> retracts RA for Thief's path
+//                  Thief stands on BT -> retracts RB for Knight's path
 export const TUTORIAL_LEVEL: LevelData = {
-  // Top platform (Knight)
-  // Col 12 has a BUTTON_KNIGHT: standing on it retracts walls in bottom grid
-  // Col 20 has a RETRACT_WALL that blocks the door - Thief's button opens it
-  topGrid: [
-    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,RW, _, _, _, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, W, W, _, _, _, _, RW, _, _, _, S],
-    [S, S, S, S, S, S, S, S, G, G, S, S,BK, S, W, W, S, S, S, _, S, S, S, S, S],
-    [S, S, S, S, S, S, S, S, K, K, S, S, S, S, S, S, S, S, S, K, S, S, S, S, S],
-    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S],
+  grid: [
+    //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S],  // 0
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 1
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 2
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 3
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 4
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 5
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 6
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 7
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 8
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 9
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 10
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, S, S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 11
+    [S, _, _, _, _, _, _, _, _,BT, S, S, S, S, S,RB,RB, _, _, _, _, _, _, _, _, _, _, _, S, S, _, _, _, _, _, _, _, _, _, S],  // 12
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 13
+    [S, _, _, _, _, _, _, T, T, T, _, _, _, _, _, _, _, S, S, S,BK, S, S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],  // 14
+    [S, _, _, _, _, _, _, S, S, S, S, W, W, S, S, S, S, S, S, S, S, S, S,RA,RA, S, S, S, _, _, S, S, S, _, _, _, _, _, _, S],  // 15
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, K, K, S, S, S, K, K, S, S, S, S, S],  // 16
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S],  // 17
   ],
 
-  // Bottom platform (Thief)
-  // Col 4-6 has low ceiling (tunnel)
-  // Col 10 has a BUTTON_THIEF: standing on it retracts the RW wall in top grid
-  // Col 14 has a RETRACT_WALL blocking a ledge - Knight's button opens it
-  bottomGrid: [
-    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S],
-    [S, _, _, _, K, K, K, _, _, _, _, _, _, _,RW, S, S, _, _, _, _, _, _, _, S],
-    [S, _, _, _, S, S, S, _, _, _, _, _, _, _, H, S, S, _, _, _, _, _, _, _, S],
-    [S, S, S, S, S, S, S, S, S, S,BT, S, S, S, S, S, S, _, _, _, S, S, S, S, S],
-    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, K, K, K, S, S, S, S, S],
-    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S],
-  ],
+  // Both players spawn on the ground (row 16 is floor, row 15 is walkable surface)
+  // Player height is 48px. Ground top = row 16 * 32 = 512. Spawn y = 512 - 48 = 464
+  knightSpawn: { x: 2 * 32, y: 15 * 32 - 48 },
+  thiefSpawn: { x: 4 * 32, y: 15 * 32 - 48 },
 
-  // Spawn positions (ground at row 6)
-  knightSpawn: { x: 2 * 32, y: 6 * 32 - 48 },
-  thiefSpawn: { x: 2 * 32, y: 6 * 32 - 48 },
-
-  // Doors
-  topDoor: { x: 22 * 32, y: 5 * 32 },
-  bottomDoor: { x: 22 * 32, y: 5 * 32 },
+  // Single shared door
+  doorPos: { x: 37 * 32, y: 15 * 32 },
 
   cratePositions: [
-    { x: 17 * 32, y: 5 * 32 - 32, platform: 'top' },
+    { x: 5 * 32, y: 15 * 32 - 32 },
   ],
 
-  leverPosition: { x: 8 * 32, y: 5 * 32 },
+  leverPosition: { x: 28 * 32, y: 14 * 32 },
 
   bridgePositions: [
-    { x: 8, y: 6 },
-    { x: 9, y: 6 },
+    // These fill in empty spots when lever is pulled (the gap near col 28-29)
+    { x: 28, y: 15 },
+    { x: 29, y: 15 },
   ],
 };

@@ -1,5 +1,6 @@
 // ============================================================
-// Game Entities - Players, Crates, Portals, etc.
+// Game Entities - Players, Crates, Portals
+// Single shared platform - no more top/bottom split
 // ============================================================
 
 import {
@@ -18,7 +19,6 @@ export interface Portal {
   width: number;
   height: number;
   color: string;
-  animFrame: number;
 }
 
 // ---- Crate Entity ----
@@ -30,13 +30,10 @@ export class Crate {
   height: number = 30;
   vy: number = 0;
   grounded: boolean = false;
-  platform: 'top' | 'bottom';
-  falling: boolean = false;
 
-  constructor(x: number, y: number, platform: 'top' | 'bottom') {
+  constructor(x: number, y: number) {
     this.x = x;
     this.y = y;
-    this.platform = platform;
   }
 
   getAABB(): AABB {
@@ -90,7 +87,6 @@ function checkSpikeCollision(box: AABB, grid: number[][]): boolean {
 // ---- Helper: check if standing on a specific tile type ----
 
 export function isStandingOnTile(box: AABB, grid: number[][], tileType: number): boolean {
-  // Check one pixel below feet
   const feetY = box.y + box.height + 1;
   const startCol = Math.floor(box.x / TILE_SIZE);
   const endCol = Math.floor((box.x + box.width - 1) / TILE_SIZE);
@@ -142,9 +138,9 @@ export abstract class Player {
     this.grounded = false;
   }
 
-  abstract update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, gameState: GameWorldState): void;
+  abstract update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, world: GameWorldState): void;
   abstract draw(ctx: CanvasRenderingContext2D): void;
-  abstract drawHUD(ctx: CanvasRenderingContext2D, offsetY: number): void;
+  abstract drawHUD(ctx: CanvasRenderingContext2D, offsetX: number): void;
 
   protected baseMovement(
     input: PlayerInput,
@@ -152,7 +148,6 @@ export abstract class Player {
     solidTypes: Set<number>,
     crates: Crate[],
   ): void {
-    // Horizontal
     this.vx = 0;
     if (input.left) {
       this.vx = -PLAYER_SPEED;
@@ -163,16 +158,13 @@ export abstract class Player {
       this.facingRight = true;
     }
 
-    // Jump
     if (input.jump && this.grounded) {
       this.vy = JUMP_FORCE;
       this.grounded = false;
     }
 
-    // Apply gravity
     this.vy = applyGravity(this.vy);
 
-    // 1) Resolve vs tile grid
     const hResult = resolveHorizontal(this.getAABB(), this.vx, grid, solidTypes);
     this.x = hResult.x;
     this.vx = hResult.vx;
@@ -182,15 +174,15 @@ export abstract class Player {
     this.vy = vResult.vy;
     this.grounded = vResult.grounded;
 
-    // 2) Resolve vs crates
-    const afterTileBox = this.getAABB();
+    // Resolve vs crates
     for (const crate of crates) {
       const cb = crate.getAABB();
-      if (aabbOverlap(afterTileBox, cb)) {
-        const overlapLeft = (afterTileBox.x + afterTileBox.width) - cb.x;
-        const overlapRight = (cb.x + cb.width) - afterTileBox.x;
-        const overlapTop = (afterTileBox.y + afterTileBox.height) - cb.y;
-        const overlapBottom = (cb.y + cb.height) - afterTileBox.y;
+      const pb = this.getAABB();
+      if (aabbOverlap(pb, cb)) {
+        const overlapLeft = (pb.x + pb.width) - cb.x;
+        const overlapRight = (cb.x + cb.width) - pb.x;
+        const overlapTop = (pb.y + pb.height) - cb.y;
+        const overlapBottom = (cb.y + cb.height) - pb.y;
         const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
         if (minOverlap === overlapTop && this.vy >= 0) {
@@ -210,12 +202,12 @@ export abstract class Player {
       }
     }
 
-    // 3) Check spike collision
+    // Check spike collision
     if (checkSpikeCollision(this.getAABB(), grid)) {
       this.resetToSpawn();
     }
 
-    // 4) Fall off bottom - respawn
+    // Fall off bottom
     if (this.y > grid.length * TILE_SIZE + 64) {
       this.resetToSpawn();
     }
@@ -247,8 +239,8 @@ export abstract class Player {
 
 export class Knight extends Player {
   ghostMode: boolean = false;
-  ghostTimer: number = 0;     // Remaining duration of ghost mode
-  ghostCooldown: number = 0;  // Cooldown before can activate again
+  ghostTimer: number = 0;
+  ghostCooldown: number = 0;
   normalSprite!: SpriteSheet;
   ghostSprite!: SpriteSheet;
 
@@ -259,17 +251,15 @@ export class Knight extends Player {
     this.spriteSheet = this.normalSprite;
   }
 
-  update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, gameState: GameWorldState): void {
+  update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, world: GameWorldState): void {
     const dt = 16.67;
 
-    // Ghost mode: ability activates it, it auto-deactivates after GHOST_DURATION
     if (input.ability && !this.ghostMode && this.ghostCooldown <= 0) {
       this.ghostMode = true;
       this.ghostTimer = GHOST_DURATION;
       this.spriteSheet = this.ghostSprite;
     }
 
-    // Count down active ghost timer
     if (this.ghostMode) {
       this.ghostTimer -= dt;
       if (this.ghostTimer <= 0) {
@@ -280,22 +270,18 @@ export class Knight extends Player {
       }
     }
 
-    // Count down cooldown
     if (this.ghostCooldown > 0) {
       this.ghostCooldown -= dt;
       if (this.ghostCooldown < 0) this.ghostCooldown = 0;
     }
 
-    // Adjust solid types based on ghost mode
     const activeSolids = new Set(solidTypes);
     if (this.ghostMode) {
       activeSolids.delete(TileType.WALL_GHOST);
     }
 
-    const myCrates = gameState.crates.filter(c => c.platform === 'top');
-    this.baseMovement(input, grid, activeSolids, myCrates);
+    this.baseMovement(input, grid, activeSolids, world.crates);
 
-    // Animation
     const config = KNIGHT_SPRITE;
     if (!this.grounded) {
       this.updateAnimation('jump', config.jump!.speed);
@@ -319,26 +305,23 @@ export class Knight extends Player {
     }
   }
 
-  drawHUD(ctx: CanvasRenderingContext2D, offsetY: number): void {
-    const barX = 10;
-    const barY = offsetY + 10;
+  drawHUD(ctx: CanvasRenderingContext2D, offsetX: number): void {
+    const barX = offsetX;
+    const barY = 10;
     const barW = 100;
     const barH = 8;
 
-    // Background bar
     ctx.fillStyle = '#333';
     ctx.fillRect(barX, barY, barW, barH);
 
     if (this.ghostMode) {
-      // Show remaining duration (draining)
-      const durationPercent = Math.max(0, this.ghostTimer / GHOST_DURATION);
+      const pct = Math.max(0, this.ghostTimer / GHOST_DURATION);
       ctx.fillStyle = '#88CCFF';
-      ctx.fillRect(barX, barY, barW * durationPercent, barH);
+      ctx.fillRect(barX, barY, barW * pct, barH);
     } else {
-      // Show cooldown recovery (filling up)
-      const readyPercent = Math.max(0, 1 - this.ghostCooldown / GHOST_COOLDOWN);
-      ctx.fillStyle = readyPercent >= 1 ? '#44AA44' : '#886622';
-      ctx.fillRect(barX, barY, barW * readyPercent, barH);
+      const pct = Math.max(0, 1 - this.ghostCooldown / GHOST_COOLDOWN);
+      ctx.fillStyle = pct >= 1 ? '#44AA44' : '#886622';
+      ctx.fillRect(barX, barY, barW * pct, barH);
     }
 
     ctx.strokeStyle = '#FFF';
@@ -346,18 +329,18 @@ export class Knight extends Player {
     ctx.strokeRect(barX, barY, barW, barH);
 
     ctx.fillStyle = '#FFF';
-    ctx.font = '10px monospace';
+    ctx.font = '9px monospace';
     if (this.ghostMode) {
-      ctx.fillText('GHOST ACTIVE', barX + barW + 5, barY + 8);
+      ctx.fillText('GHOST', barX + barW + 4, barY + 8);
     } else if (this.ghostCooldown > 0) {
-      ctx.fillText('RECHARGING', barX + barW + 5, barY + 8);
+      ctx.fillText('RECHARGE', barX + barW + 4, barY + 8);
     } else {
-      ctx.fillText('GHOST READY', barX + barW + 5, barY + 8);
+      ctx.fillText('READY', barX + barW + 4, barY + 8);
     }
 
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 12px monospace';
-    ctx.fillText('KNIGHT', barX, barY + 24);
+    ctx.fillStyle = '#CC4444';
+    ctx.font = 'bold 10px monospace';
+    ctx.fillText('KNIGHT', barX, barY + 22);
   }
 }
 
@@ -375,8 +358,7 @@ export class Thief extends Player {
     this.spriteSheet = new SpriteSheet('/sprites/Thief.png', THIEF_SPRITE);
   }
 
-  update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, gameState: GameWorldState): void {
-    // Toggle crouch
+  update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, world: GameWorldState): void {
     if (input.crouch && this.grounded) {
       this.crouching = !this.crouching;
       if (this.crouching) {
@@ -389,8 +371,7 @@ export class Thief extends Player {
           width: this.width,
           height: this.normalHeight,
         };
-        const blocked = checkStandCollision(standBox, grid, solidTypes);
-        if (!blocked) {
+        if (!checkStandCollision(standBox, grid, solidTypes)) {
           this.y -= this.normalHeight - this.crouchHeight;
           this.height = this.normalHeight;
         } else {
@@ -399,7 +380,6 @@ export class Thief extends Player {
       }
     }
 
-    // Portal ability
     if (input.ability && this.portalCooldown <= 0) {
       this.placePortal();
     }
@@ -407,13 +387,9 @@ export class Thief extends Player {
       this.portalCooldown -= 16.67;
     }
 
-    const myCrates = gameState.crates.filter(c => c.platform === 'bottom');
-    this.baseMovement(input, grid, solidTypes, myCrates);
-
-    // Check portal teleportation
+    this.baseMovement(input, grid, solidTypes, world.crates);
     this.checkPortalTeleport();
 
-    // Animation
     const config = THIEF_SPRITE;
     if (this.crouching) {
       this.updateAnimation('crouch', config.crouch!.speed);
@@ -435,13 +411,12 @@ export class Thief extends Player {
         x: portalX, y: portalY,
         width: 16, height: 48,
         color: this.portals.length === 0 ? '#FF6600' : '#0066FF',
-        animFrame: 0,
       });
     } else {
       this.portals = [{
         x: portalX, y: portalY,
         width: 16, height: 48,
-        color: '#FF6600', animFrame: 0,
+        color: '#FF6600',
       }];
     }
     this.portalCooldown = PORTAL_COOLDOWN;
@@ -452,11 +427,11 @@ export class Thief extends Player {
     const playerBox = this.getAABB();
     for (let i = 0; i < 2; i++) {
       const portal = this.portals[i];
-      const otherPortal = this.portals[1 - i];
+      const other = this.portals[1 - i];
       const portalBox: AABB = { x: portal.x, y: portal.y, width: portal.width, height: portal.height };
       if (aabbOverlap(playerBox, portalBox)) {
-        this.x = otherPortal.x + otherPortal.width / 2 - this.width / 2;
-        this.y = otherPortal.y;
+        this.x = other.x + other.width / 2 - this.width / 2;
+        this.y = other.y;
         this.portals = [];
         this.portalCooldown = PORTAL_COOLDOWN;
         break;
@@ -494,32 +469,28 @@ export class Thief extends Player {
     ctx.restore();
   }
 
-  drawHUD(ctx: CanvasRenderingContext2D, offsetY: number): void {
-    const barX = 10;
-    const barY = offsetY + 10;
+  drawHUD(ctx: CanvasRenderingContext2D, offsetX: number): void {
+    const barX = offsetX;
+    const barY = 10;
     const barW = 100;
     const barH = 8;
 
     ctx.fillStyle = '#333';
     ctx.fillRect(barX, barY, barW, barH);
-    const cooldownPercent = Math.max(0, 1 - this.portalCooldown / PORTAL_COOLDOWN);
+    const pct = Math.max(0, 1 - this.portalCooldown / PORTAL_COOLDOWN);
     ctx.fillStyle = '#FF6600';
-    ctx.fillRect(barX, barY, barW * cooldownPercent, barH);
+    ctx.fillRect(barX, barY, barW * pct, barH);
     ctx.strokeStyle = '#FFF';
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barW, barH);
 
     ctx.fillStyle = '#FFF';
-    ctx.font = '10px monospace';
-    ctx.fillText(`PORTAL (${this.portals.length}/2)`, barX + barW + 5, barY + 8);
-    if (this.crouching) {
-      ctx.fillStyle = '#FFAA00';
-      ctx.fillText('CROUCHING', barX + barW + 80, barY + 8);
-    }
+    ctx.font = '9px monospace';
+    ctx.fillText(`PORTAL ${this.portals.length}/2`, barX + barW + 4, barY + 8);
 
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 12px monospace';
-    ctx.fillText('THIEF', barX, barY + 24);
+    ctx.fillStyle = '#44AA88';
+    ctx.font = 'bold 10px monospace';
+    ctx.fillText('THIEF', barX, barY + 22);
   }
 }
 
@@ -539,7 +510,7 @@ function checkStandCollision(box: AABB, grid: number[][], solidTypes: Set<number
   return false;
 }
 
-// ---- Game World State (shared between platforms) ----
+// ---- Game World State ----
 
 export interface GameWorldState {
   leverPulled: boolean;
@@ -547,6 +518,5 @@ export interface GameWorldState {
   knightOnButton: boolean;
   thiefOnButton: boolean;
   crates: Crate[];
-  topGrid: number[][];
-  bottomGrid: number[][];
+  grid: number[][];
 }
