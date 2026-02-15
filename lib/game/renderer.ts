@@ -280,7 +280,7 @@ export function renderWorld(
     }
   }
 
-  // Draw door
+  // Draw door (doorPos is already in world coordinates from game.ts)
   drawDoor(ctx, doorPos.x, doorPos.y);
 
   // Draw crates
@@ -631,10 +631,10 @@ export function renderTutorialHints(
   let color = '#FFAA44';
 
   if (!gameState.leverPulled) {
-    hint = 'A ghost wall blocks the path! Knight: press SHIFT to phase through, then press E near the lever to disable it.';
+    hint = 'Ghost wall blocks the path! Knight: SHIFT to phase through, stand on the lever, press E to disable wall. Then Thief can pass.';
     color = '#88CCFF';
   } else {
-    hint = 'The ghost wall is gone! Both players head right to the golden door.';
+    hint = 'Wall disabled! Both players go right to the golden door.';
     color = '#44FF44';
   }
 

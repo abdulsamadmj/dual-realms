@@ -21,12 +21,12 @@ export interface LevelData {
 }
 
 // Simple co-op puzzle:
-// Both players start on the left.
-// A ghost wall (W) blocks the path at columns 12-13.
-// The Knight uses ghost mode to phase through the wall.
-// Behind the wall at col 16 there is a lever.
+// Both players start on the left on a platform.
+// A ghost wall (W) blocks the path in the middle.
+// The Knight uses ghost mode to phase through the wall and reach the lever.
+// Knight stands on the lever tile and presses E to activate it.
 // Pulling the lever disables (removes) the ghost wall so the Thief can pass.
-// Both then walk right to the door at col 22 to win.
+// Both then walk right to the door to win.
 //
 // Grid: 25 cols x 12 rows
 export const TUTORIAL_LEVEL: LevelData = {
@@ -38,26 +38,26 @@ export const TUTORIAL_LEVEL: LevelData = {
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 3
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 4
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 5
-    [S, _, _, _, _, _, _, _, _, _, S, S, W, W, S, _, _, _, _, _, _, _, _, _, S], // 6
-    [S, _, _, _, _, _, _, _, _, _, S, S, W, W, S, _, _, _, _, _, _, _, _, _, S], // 7
-    [S, _, _, _, _, _, _, _, _, _, S, S, W, W, S, _, _, _, _, _, _, _, _, _, S], // 8
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 9
+    [S, S, S, S, _, _, _, _, _, _, _, W, W, W, _, _, _, _, _, _, _, _, S, S, S], // 6 platform with ghost wall blocking
+    [S, S, S, S, _, _, _, _, _, _, _, W, W, W, _, _, L, _, _, _, _, _, S, S, S], // 7 lever on right side
+    [S, S, S, S, _, _, _, _, _, _, _, W, W, W, _, _, _, _, _, _, _, _, S, S, S], // 8 platform continues right
+    [S, S, S, S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S, S, D], // 9 door at far right
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 10 floor
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 11
   ],
 
   // Ground is top of row 10 (y = 10*32 = 320). Player height = 48.
   // Spawn y = 320 - 48 = 272
-  knightSpawn: { x: 2 * 32, y: 10 * 32 - 48 },
-  thiefSpawn:  { x: 4 * 32, y: 10 * 32 - 48 },
+  knightSpawn: { x: 1 * 32, y: 6 * 32 - 48 },
+  thiefSpawn:  { x: 2 * 32, y: 6 * 32 - 48 },
 
-  // Door tile at col 22, row 9 (on the ground)
-  doorPos: { x: 22 * 32, y: 9 * 32 },
+  // Door at col 24, row 9
+  doorPos: { x: 24, y: 9 },
 
   cratePositions: [],
 
-  // Lever behind the ghost wall at col 16, row 9 (on ground)
-  leverPosition: { x: 16 * 32, y: 9 * 32 },
+  // Lever at col 16, row 7 (on the platform)
+  leverPosition: { x: 16, y: 7 },
 
   // No bridge tiles needed for this level
   bridgePositions: [],
