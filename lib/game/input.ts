@@ -5,9 +5,10 @@
 export interface PlayerInput {
   left: boolean;
   right: boolean;
-  jump: boolean;
-  ability: boolean; // Ghost for Knight, Portal for Thief
-  crouch: boolean;  // Only for Thief
+  jump: boolean;     // true on the frame the key is first pressed
+  jumpHeld: boolean;  // true while key is held (for buffered/responsive jumping)
+  ability: boolean;  // Ghost for Knight, Portal for Thief
+  crouch: boolean;   // Only for Thief
 }
 
 export interface KeyBindings {
@@ -88,12 +89,14 @@ export class InputManager {
         return;
       }
 
-      // Prevent default for game keys
+      // Prevent default for game keys to avoid scrolling etc
       const allBound = Object.values(this.bindings);
       if (allBound.includes(e.code) || e.code === 'Space') {
         e.preventDefault();
       }
-      if (!this.prevKeys.has(e.code)) {
+
+      // Only add to justPressed if it wasn't already held
+      if (!this.keys.has(e.code)) {
         this.justPressed.add(e.code);
       }
       this.keys.add(e.code);
@@ -109,6 +112,9 @@ export class InputManager {
     }
   }
 
+  /**
+   * Called at the END of each game frame to clear single-frame inputs.
+   */
   update(): void {
     this.prevKeys = new Set(this.keys);
     this.justPressed.clear();
@@ -140,6 +146,7 @@ export class InputManager {
       left: this.isHeld(this.bindings.p1Left) || (gp?.axes[0] ?? 0) < -0.3,
       right: this.isHeld(this.bindings.p1Right) || (gp?.axes[0] ?? 0) > 0.3,
       jump: this.isJustPressed(this.bindings.p1Jump) || (gp?.buttons[0]?.pressed ?? false),
+      jumpHeld: this.isHeld(this.bindings.p1Jump) || (gp?.buttons[0]?.pressed ?? false),
       ability: this.isJustPressed(this.bindings.p1Ability) || (gp?.buttons[2]?.pressed ?? false),
       crouch: false,
     };
@@ -151,6 +158,7 @@ export class InputManager {
       left: this.isHeld(this.bindings.p2Left) || (gp?.axes[0] ?? 0) < -0.3,
       right: this.isHeld(this.bindings.p2Right) || (gp?.axes[0] ?? 0) > 0.3,
       jump: this.isJustPressed(this.bindings.p2Jump) || (gp?.buttons[0]?.pressed ?? false),
+      jumpHeld: this.isHeld(this.bindings.p2Jump) || (gp?.buttons[0]?.pressed ?? false),
       ability: this.isJustPressed(this.bindings.p2Ability) || (gp?.buttons[2]?.pressed ?? false),
       crouch: this.isJustPressed(this.bindings.p2Crouch) || (gp?.buttons[1]?.pressed ?? false),
     };

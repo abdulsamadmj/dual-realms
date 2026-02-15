@@ -53,6 +53,9 @@ export class SpriteSheet {
       if (a) anims.push([key, a as SpriteAnimation]);
     }
 
+    const imgW = this.image.naturalWidth;
+    const imgH = this.image.naturalHeight;
+
     for (const [key, anim] of anims) {
       const frames: HTMLCanvasElement[] = [];
       for (let i = 0; i < anim.frames; i++) {
@@ -65,13 +68,19 @@ export class SpriteSheet {
         const sx = i * this.config.frameWidth;
         const sy = anim.row * this.config.frameHeight;
 
-        offCtx.drawImage(
-          this.image,
-          sx, sy,
-          this.config.frameWidth, this.config.frameHeight,
-          0, 0,
-          this.config.frameWidth, this.config.frameHeight,
-        );
+        // Clamp source rect to image bounds to prevent reading garbage pixels
+        const clampedW = Math.min(this.config.frameWidth, imgW - sx);
+        const clampedH = Math.min(this.config.frameHeight, imgH - sy);
+
+        if (clampedW > 0 && clampedH > 0) {
+          offCtx.drawImage(
+            this.image,
+            sx, sy,
+            clampedW, clampedH,
+            0, 0,
+            clampedW, clampedH,
+          );
+        }
         frames.push(offscreen);
       }
       this.frameCache.set(key, frames);

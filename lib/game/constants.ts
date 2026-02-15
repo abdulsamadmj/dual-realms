@@ -31,11 +31,11 @@ export const THIEF_SPRITE = {
   frameWidth: 54,
   frameHeight: 34,
   cols: 7,
-  idle: { row: 0, frames: 7, speed: 8 },
-  run: { row: 1, frames: 7, speed: 6 },
-  attack: { row: 2, frames: 7, speed: 4 },
-  crouch: { row: 3, frames: 5, speed: 8 },
-  death: { row: 4, frames: 5, speed: 8 },
+  idle: { row: 0, frames: 6, speed: 8 },
+  run: { row: 1, frames: 6, speed: 6 },
+  attack: { row: 2, frames: 6, speed: 4 },
+  crouch: { row: 3, frames: 4, speed: 8 },
+  death: { row: 4, frames: 4, speed: 8 },
 };
 
 // Tile types for level data

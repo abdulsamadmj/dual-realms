@@ -142,12 +142,16 @@ export abstract class Player {
   abstract draw(ctx: CanvasRenderingContext2D): void;
   abstract drawHUD(ctx: CanvasRenderingContext2D, offsetX: number): void;
 
+  // Jump buffer: allows jump to trigger if jump key is held when landing
+  private jumpBuffered: boolean = false;
+
   protected baseMovement(
     input: PlayerInput,
     grid: number[][],
     solidTypes: Set<number>,
     crates: Crate[],
   ): void {
+    // Horizontal movement - always responsive, even while airborne
     this.vx = 0;
     if (input.left) {
       this.vx = -PLAYER_SPEED;
@@ -158,9 +162,18 @@ export abstract class Player {
       this.facingRight = true;
     }
 
-    if (input.jump && this.grounded) {
+    // Jump: trigger on fresh press OR if held and we just landed (buffered jump)
+    if (input.jump) {
+      this.jumpBuffered = true;
+    }
+    if (!input.jumpHeld) {
+      this.jumpBuffered = false;
+    }
+
+    if ((input.jump || this.jumpBuffered) && this.grounded) {
       this.vy = JUMP_FORCE;
       this.grounded = false;
+      this.jumpBuffered = false;
     }
 
     this.vy = applyGravity(this.vy);
@@ -394,7 +407,8 @@ export class Thief extends Player {
     if (this.crouching) {
       this.updateAnimation('crouch', config.crouch!.speed);
     } else if (!this.grounded) {
-      this.updateAnimation('run', config.run.speed);
+      // Airborne: use idle (single pose) to avoid run cycle in mid-air
+      this.updateAnimation('idle', config.idle.speed);
     } else if (this.vx !== 0) {
       this.updateAnimation('run', config.run.speed);
     } else {
