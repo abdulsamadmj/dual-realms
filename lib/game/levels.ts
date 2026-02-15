@@ -35,29 +35,29 @@ export const TUTORIAL_LEVEL: LevelData = {
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 0 ceiling
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 1
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 2
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 3
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 4
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 5
-    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, S, S, S], // 6 platform with ghost wall in middle
-    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, L, S, S, S, S, S, S, S, S], // 7 lever on platform
-    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, S, S, S], // 8 platform continues
-    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, D], // 9 door at far right
+    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, S, S, S], // 3 platform with ghost wall in middle
+    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, L, S, S, S, S, S, S, S, S], // 4 lever on platform
+    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, D, S, S], // 5 platform continues, door
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 6
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 7
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 8
+    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 9
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 10 floor
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 11
   ],
 
   // Ground is top of row 10 (y = 10*32 = 320). Player height = 48.
-  // Platform is rows 6-8, spawn at row 6
-  knightSpawn: { x: 1 * 32, y: 6 * 32 - 48 },
-  thiefSpawn:  { x: 2 * 32, y: 6 * 32 - 48 },
+  // Platform is rows 3-5, spawn at row 3
+  knightSpawn: { x: 1 * 32, y: 3 * 32 - 48 },
+  thiefSpawn:  { x: 2 * 32, y: 3 * 32 - 48 },
 
-  // Door at col 24, row 9 (on the platform)
-  doorPos: { x: 24, y: 9 },
+  // Door at col 23, row 5 (on the platform)
+  doorPos: { x: 23, y: 5 },
 
   cratePositions: [],
 
-  // Lever at col 16, row 7 (on the platform, right of the wall)
-  leverPosition: { x: 16, y: 7 },
+  // Lever at col 16, row 4 (on the platform, right of the wall)
+  leverPosition: { x: 16, y: 4 },
 
   // No bridge tiles needed for this level
   bridgePositions: [],
