@@ -280,7 +280,7 @@ export function renderWorld(
     }
   }
 
-  // Draw door
+  // Draw door (doorPos is already in world coordinates from game.ts)
   drawDoor(ctx, doorPos.x, doorPos.y);
 
   // Draw crates
@@ -450,7 +450,7 @@ export function renderPauseMenu(
 
   const centerX = CANVAS_WIDTH / 2;
   const panelW = 420;
-  const panelH = tab === 'controls' ? 380 : 240;
+  const panelH = tab === 'controls' ? 430 : 240;
   const panelX = centerX - panelW / 2;
   const panelY = (CANVAS_HEIGHT - panelH) / 2;
 
@@ -524,6 +524,7 @@ function renderPauseControls(
     ['Move Right', 'p1Right'],
     ['Jump', 'p1Jump'],
     ['Ghost Mode', 'p1Ability'],
+    ['Interact', 'p1Interact'],
   ];
 
   let row = 0;
@@ -565,6 +566,7 @@ function renderPauseControls(
     ['Jump', 'p2Jump'],
     ['Portal', 'p2Ability'],
     ['Crouch', 'p2Crouch'],
+    ['Interact', 'p2Interact'],
   ];
 
   for (const [label, key] of thiefBinds) {
@@ -629,10 +631,10 @@ export function renderTutorialHints(
   let color = '#FFAA44';
 
   if (!gameState.leverPulled) {
-    hint = 'A ghost wall blocks the path! Knight: press SHIFT to phase through, then pull the lever behind it.';
+    hint = 'Ghost wall blocks the path! Knight: SHIFT to phase through, stand on the lever, press E to disable wall. Then Thief can pass.';
     color = '#88CCFF';
   } else {
-    hint = 'The ghost wall is gone! Both players head right to the golden door.';
+    hint = 'Wall disabled! Both players go right to the golden door.';
     color = '#44FF44';
   }
 

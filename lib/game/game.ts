@@ -52,7 +52,7 @@ export class Game {
   pauseSelectedIndex: number = 0;
   pauseRebindingKey: string | null = null;
   pauseMainItems = ['Resume', 'Controls', 'Restart Level', 'Quit to Menu'];
-  pauseControlItems = 10; // 4 knight + 5 thief + 1 back
+  pauseControlItems = 12; // 5 knight + 6 thief + 1 back
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -205,8 +205,8 @@ export class Game {
       }
 
       const bindKeys: (keyof KeyBindings)[] = [
-        'p1Left', 'p1Right', 'p1Jump', 'p1Ability',
-        'p2Left', 'p2Right', 'p2Jump', 'p2Ability', 'p2Crouch',
+        'p1Left', 'p1Right', 'p1Jump', 'p1Ability', 'p1Interact',
+        'p2Left', 'p2Right', 'p2Jump', 'p2Ability', 'p2Crouch', 'p2Interact',
       ];
       const bindKey = bindKeys[this.pauseSelectedIndex];
       if (bindKey) {
@@ -252,36 +252,30 @@ export class Game {
       crate.update(this.grid, solids);
     }
 
-    // Lever interaction - either player can pull
+    // Lever interaction - player must stand on lever tile and press interact
     if (!this.worldState.leverPulled) {
-      const leverPos = TUTORIAL_LEVEL.leverPosition;
-      const leverBox = { x: leverPos.x, y: leverPos.y, width: TILE_SIZE, height: TILE_SIZE };
-      if (aabbOverlap(this.thief.getAABB(), leverBox) || aabbOverlap(this.knight.getAABB(), leverBox)) {
-        this.worldState.leverPulled = true;
-        this.worldState.bridgeActive = true;
-
-        // Activate bridge tiles
-        for (const bp of TUTORIAL_LEVEL.bridgePositions) {
-          if (this.grid[bp.y]) {
-            this.grid[bp.y][bp.x] = TileType.BRIDGE;
-          }
-        }
-
-        // Remove all ghost wall tiles from the grid so the Thief can pass
-        for (let row = 0; row < this.grid.length; row++) {
-          for (let col = 0; col < this.grid[row].length; col++) {
-            if (this.grid[row][col] === TileType.WALL_GHOST) {
-              this.grid[row][col] = TileType.EMPTY;
-            }
-          }
-        }
+      const leverGridX = TUTORIAL_LEVEL.leverPosition.x;
+      const leverGridY = TUTORIAL_LEVEL.leverPosition.y;
+      const leverBox = { x: leverGridX * TILE_SIZE, y: leverGridY * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE };
+      
+      // Check if Knight is on lever tile and presses interact
+      if (aabbOverlap(this.knight.getAABB(), leverBox) && p1Input.interact) {
+        console.log("[v0] Knight activated lever at grid (", leverGridX, ",", leverGridY, ")");
+        this.activateLever();
+      }
+      
+      // Check if Thief is on lever tile and presses interact
+      if (aabbOverlap(this.thief.getAABB(), leverBox) && p2Input.interact) {
+        console.log("[v0] Thief activated lever at grid (", leverGridX, ",", leverGridY, ")");
+        this.activateLever();
       }
     }
 
     // Win condition: both at door
-    const doorPos = TUTORIAL_LEVEL.doorPos;
-    this.knight.reachedDoor = this.knight.checkDoor(doorPos);
-    this.thief.reachedDoor = this.thief.checkDoor(doorPos);
+    const doorGridPos = TUTORIAL_LEVEL.doorPos;
+    const doorWorldPos = { x: doorGridPos.x * TILE_SIZE, y: doorGridPos.y * TILE_SIZE };
+    this.knight.reachedDoor = this.knight.checkDoor(doorWorldPos);
+    this.thief.reachedDoor = this.thief.checkDoor(doorWorldPos);
 
     if (this.knight.reachedDoor && this.thief.reachedDoor) {
       this.state = 'win';
@@ -315,6 +309,21 @@ export class Game {
       case 'win':
         renderWinScreen(this.ctx);
         break;
+    }
+  }
+
+  private activateLever(): void {
+    this.worldState.leverPulled = true;
+    this.worldState.bridgeActive = true;
+
+    // Remove all ghost wall tiles from the grid so the Thief can pass
+    for (let row = 0; row < this.grid.length; row++) {
+      for (let col = 0; col < this.grid[row].length; col++) {
+        if (this.grid[row][col] === TileType.WALL_GHOST) {
+          console.log(`[v0] Removing WALL_GHOST at (${col}, ${row})`);
+          this.grid[row][col] = TileType.EMPTY;
+        }
+      }
     }
   }
 
