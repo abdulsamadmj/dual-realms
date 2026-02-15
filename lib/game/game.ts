@@ -10,7 +10,7 @@ import {
   renderWorld, renderMenu, renderWinScreen,
   renderTutorialHints, renderPauseMenu, type PauseTab,
 } from './renderer';
-import { aabbOverlap, type AABB } from './physics';
+import { aabbOverlap } from './physics';
 
 export type GameState = 'menu' | 'playing' | 'paused' | 'win';
 
@@ -252,18 +252,20 @@ export class Game {
       crate.update(this.grid, solids);
     }
 
-    // Lever interaction - either player can pull by pressing interact key while near it
+    // Lever interaction - player must stand on lever and press interact
     if (!this.worldState.leverPulled) {
       const leverPos = TUTORIAL_LEVEL.leverPosition;
-      const leverBox = { x: leverPos.x, y: leverPos.y, width: TILE_SIZE, height: TILE_SIZE };
+      const leverBox = { x: leverPos.x * TILE_SIZE, y: leverPos.y * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE };
       
-      // Check if Knight is near lever and presses interact
-      if ((aabbOverlap(this.knight.getAABB(), leverBox) || this.isNearLever(this.knight.getAABB(), leverPos)) && p1Input.interact) {
+      // Check if Knight is on lever and presses interact
+      if (aabbOverlap(this.knight.getAABB(), leverBox) && p1Input.interact) {
+        console.log("[v0] Knight activated lever");
         this.activateLever();
       }
       
-      // Check if Thief is near lever and presses interact
-      if ((aabbOverlap(this.thief.getAABB(), leverBox) || this.isNearLever(this.thief.getAABB(), leverPos)) && p2Input.interact) {
+      // Check if Thief is on lever and presses interact
+      if (aabbOverlap(this.thief.getAABB(), leverBox) && p2Input.interact) {
+        console.log("[v0] Thief activated lever");
         this.activateLever();
       }
     }
@@ -308,35 +310,15 @@ export class Game {
     }
   }
 
-  private isNearLever(playerBox: AABB, leverPos: { x: number; y: number }): boolean {
-    // Check if player is within 60 pixels of lever
-    const leverCenterX = leverPos.x + TILE_SIZE / 2;
-    const leverCenterY = leverPos.y + TILE_SIZE / 2;
-    const playerCenterX = playerBox.x + playerBox.width / 2;
-    const playerCenterY = playerBox.y + playerBox.height / 2;
-    
-    const dx = leverCenterX - playerCenterX;
-    const dy = leverCenterY - playerCenterY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    return distance < 60;
-  }
-
   private activateLever(): void {
     this.worldState.leverPulled = true;
     this.worldState.bridgeActive = true;
-
-    // Activate bridge tiles
-    for (const bp of TUTORIAL_LEVEL.bridgePositions) {
-      if (this.grid[bp.y]) {
-        this.grid[bp.y][bp.x] = TileType.BRIDGE;
-      }
-    }
 
     // Remove all ghost wall tiles from the grid so the Thief can pass
     for (let row = 0; row < this.grid.length; row++) {
       for (let col = 0; col < this.grid[row].length; col++) {
         if (this.grid[row][col] === TileType.WALL_GHOST) {
+          console.log(`[v0] Removing WALL_GHOST at (${col}, ${row})`);
           this.grid[row][col] = TileType.EMPTY;
         }
       }
