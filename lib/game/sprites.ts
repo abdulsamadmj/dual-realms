@@ -45,7 +45,7 @@ export class SpriteSheet {
   constructor(src: string, config: SpriteConfig) {
     this.config = config;
     this.image = new Image();
-    this.image.crossOrigin = 'anonymous';
+    this.image.crossOrigin = "anonymous";
     this.image.src = src;
     this.image.onload = () => {
       this.loaded = true;
@@ -60,14 +60,26 @@ export class SpriteSheet {
    */
   private extractAllFrames(): void {
     // Draw full sheet onto a temp canvas to read pixel data
-    const tmpCanvas = document.createElement('canvas');
+    const tmpCanvas = document.createElement("canvas");
     tmpCanvas.width = this.image.naturalWidth;
     tmpCanvas.height = this.image.naturalHeight;
-    const tmpCtx = tmpCanvas.getContext('2d')!;
+    const tmpCtx = tmpCanvas.getContext("2d")!;
     tmpCtx.drawImage(this.image, 0, 0);
-    const fullData = tmpCtx.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height);
+    const fullData = tmpCtx.getImageData(
+      0,
+      0,
+      tmpCanvas.width,
+      tmpCanvas.height,
+    );
 
-    const animKeys = ['idle', 'run', 'attack', 'jump', 'crouch', 'death'] as const;
+    const animKeys = [
+      "idle",
+      "run",
+      "attack",
+      "jump",
+      "crouch",
+      "death",
+    ] as const;
 
     for (const key of animKeys) {
       const anim = this.config[key] as SpriteAnimation | undefined;
@@ -96,7 +108,8 @@ export class SpriteSheet {
             const idx = (imgY * fullData.width + imgX) * 4;
             const alpha = fullData.data[idx + 3];
 
-            if (alpha > 10) { // Non-transparent pixel
+            if (alpha > 10) {
+              // Non-transparent pixel
               hasContent = true;
               if (px < minX) minX = px;
               if (py < minY) minY = py;
@@ -108,10 +121,16 @@ export class SpriteSheet {
 
         if (!hasContent) {
           // Empty frame: create 1x1 transparent canvas
-          const empty = document.createElement('canvas');
+          const empty = document.createElement("canvas");
           empty.width = 1;
           empty.height = 1;
-          frames.push({ canvas: empty, offsetX: 0, offsetY: 0, cropW: 1, cropH: 1 });
+          frames.push({
+            canvas: empty,
+            offsetX: 0,
+            offsetY: 0,
+            cropW: 1,
+            cropH: 1,
+          });
           continue;
         }
 
@@ -124,10 +143,10 @@ export class SpriteSheet {
         const cropW = maxX - minX + 1;
         const cropH = maxY - minY + 1;
 
-        const frameCanvas = document.createElement('canvas');
+        const frameCanvas = document.createElement("canvas");
         frameCanvas.width = cropW;
         frameCanvas.height = cropH;
-        const fCtx = frameCanvas.getContext('2d')!;
+        const fCtx = frameCanvas.getContext("2d")!;
         fCtx.imageSmoothingEnabled = false;
 
         // Copy just the cropped region from the sheet
@@ -141,8 +160,14 @@ export class SpriteSheet {
         if (safeW > 0 && safeH > 0) {
           fCtx.drawImage(
             this.image,
-            srcX, srcY, safeW, safeH,
-            0, 0, safeW, safeH,
+            srcX,
+            srcY,
+            safeW,
+            safeH,
+            0,
+            0,
+            safeW,
+            safeH,
           );
         }
 
@@ -171,7 +196,9 @@ export class SpriteSheet {
   ): void {
     if (!this.loaded) return;
 
-    const anim = this.config[animation as keyof SpriteConfig] as SpriteAnimation | undefined;
+    const anim = this.config[animation as keyof SpriteConfig] as
+      | SpriteAnimation
+      | undefined;
     if (!anim) return;
 
     const frameIndex = frame % anim.frames;
@@ -210,14 +237,26 @@ export class SpriteSheet {
         ctx.scale(-1, 1);
         ctx.drawImage(
           this.image,
-          sx, sy, this.config.frameWidth, this.config.frameHeight,
-          -drawW / 2, 0, drawW, drawH,
+          sx,
+          sy,
+          this.config.frameWidth,
+          this.config.frameHeight,
+          -drawW / 2,
+          0,
+          drawW,
+          drawH,
         );
       } else {
         ctx.drawImage(
           this.image,
-          sx, sy, this.config.frameWidth, this.config.frameHeight,
-          x, y, drawW, drawH,
+          sx,
+          sy,
+          this.config.frameWidth,
+          this.config.frameHeight,
+          x,
+          y,
+          drawW,
+          drawH,
         );
       }
     }
@@ -227,7 +266,7 @@ export class SpriteSheet {
 }
 
 export class Animator {
-  currentAnimation: string = 'idle';
+  currentAnimation: string = "idle";
   frame: number = 0;
   tickCount: number = 0;
 

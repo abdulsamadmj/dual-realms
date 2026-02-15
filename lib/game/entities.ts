@@ -4,12 +4,25 @@
 // ============================================================
 
 import {
-  TILE_SIZE, PLAYER_SPEED, JUMP_FORCE, GHOST_DURATION, GHOST_COOLDOWN, PORTAL_COOLDOWN,
-  KNIGHT_SPRITE, THIEF_SPRITE, TileType,
-} from './constants';
-import { SpriteSheet, Animator } from './sprites';
-import { applyGravity, resolveHorizontal, resolveVertical, AABB, aabbOverlap } from './physics';
-import type { PlayerInput } from './input';
+  TILE_SIZE,
+  PLAYER_SPEED,
+  JUMP_FORCE,
+  GHOST_DURATION,
+  GHOST_COOLDOWN,
+  PORTAL_COOLDOWN,
+  KNIGHT_SPRITE,
+  THIEF_SPRITE,
+  TileType,
+} from "./constants";
+import { SpriteSheet, Animator } from "./sprites";
+import {
+  applyGravity,
+  resolveHorizontal,
+  resolveVertical,
+  AABB,
+  aabbOverlap,
+} from "./physics";
+import type { PlayerInput } from "./input";
 
 // ---- Portal Entity ----
 
@@ -49,13 +62,13 @@ export class Crate {
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = '#A0522D';
+    ctx.fillStyle = "#A0522D";
     ctx.fillRect(this.x, this.y, this.width, this.height);
-    ctx.fillStyle = '#8B4513';
+    ctx.fillStyle = "#8B4513";
     ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
-    ctx.fillStyle = '#CD853F';
+    ctx.fillStyle = "#CD853F";
     ctx.fillRect(this.x + 4, this.y + 4, this.width - 8, this.height - 8);
-    ctx.strokeStyle = '#8B4513';
+    ctx.strokeStyle = "#8B4513";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(this.x + 4, this.y + 4);
@@ -76,7 +89,12 @@ function checkSpikeCollision(box: AABB, grid: number[][]): boolean {
 
   for (let row = startRow; row <= endRow; row++) {
     for (let col = startCol; col <= endCol; col++) {
-      if (row >= 0 && row < grid.length && col >= 0 && col < (grid[0]?.length ?? 0)) {
+      if (
+        row >= 0 &&
+        row < grid.length &&
+        col >= 0 &&
+        col < (grid[0]?.length ?? 0)
+      ) {
         if (grid[row][col] === TileType.SPIKE) return true;
       }
     }
@@ -86,7 +104,11 @@ function checkSpikeCollision(box: AABB, grid: number[][]): boolean {
 
 // ---- Helper: check if standing on a specific tile type ----
 
-export function isStandingOnTile(box: AABB, grid: number[][], tileType: number): boolean {
+export function isStandingOnTile(
+  box: AABB,
+  grid: number[][],
+  tileType: number,
+): boolean {
   const feetY = box.y + box.height + 1;
   const startCol = Math.floor(box.x / TILE_SIZE);
   const endCol = Math.floor((box.x + box.width - 1) / TILE_SIZE);
@@ -138,7 +160,12 @@ export abstract class Player {
     this.grounded = false;
   }
 
-  abstract update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, world: GameWorldState): void;
+  abstract update(
+    input: PlayerInput,
+    grid: number[][],
+    solidTypes: Set<number>,
+    world: GameWorldState,
+  ): void;
   abstract draw(ctx: CanvasRenderingContext2D): void;
   abstract drawHUD(ctx: CanvasRenderingContext2D, offsetX: number): void;
 
@@ -178,7 +205,12 @@ export abstract class Player {
 
     this.vy = applyGravity(this.vy);
 
-    const hResult = resolveHorizontal(this.getAABB(), this.vx, grid, solidTypes);
+    const hResult = resolveHorizontal(
+      this.getAABB(),
+      this.vx,
+      grid,
+      solidTypes,
+    );
     this.x = hResult.x;
     this.vx = hResult.vx;
 
@@ -192,11 +224,16 @@ export abstract class Player {
       const cb = crate.getAABB();
       const pb = this.getAABB();
       if (aabbOverlap(pb, cb)) {
-        const overlapLeft = (pb.x + pb.width) - cb.x;
-        const overlapRight = (cb.x + cb.width) - pb.x;
-        const overlapTop = (pb.y + pb.height) - cb.y;
-        const overlapBottom = (cb.y + cb.height) - pb.y;
-        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+        const overlapLeft = pb.x + pb.width - cb.x;
+        const overlapRight = cb.x + cb.width - pb.x;
+        const overlapTop = pb.y + pb.height - cb.y;
+        const overlapBottom = cb.y + cb.height - pb.y;
+        const minOverlap = Math.min(
+          overlapLeft,
+          overlapRight,
+          overlapTop,
+          overlapBottom,
+        );
 
         if (minOverlap === overlapTop && this.vy >= 0) {
           this.y = cb.y - this.height;
@@ -230,20 +267,32 @@ export abstract class Player {
     this.animator.update(animName, speed);
   }
 
-  protected drawSprite(ctx: CanvasRenderingContext2D, alpha: number = 1.0): void {
+  protected drawSprite(
+    ctx: CanvasRenderingContext2D,
+    alpha: number = 1.0,
+  ): void {
     if (!this.spriteSheet) return;
     const drawX = this.x - 20;
     const drawY = this.y - 16;
     this.spriteSheet.draw(
-      ctx, drawX, drawY,
+      ctx,
+      drawX,
+      drawY,
       this.animator.currentAnimation,
       this.animator.getFrame(),
-      !this.facingRight, alpha, 2.0,
+      !this.facingRight,
+      alpha,
+      2.0,
     );
   }
 
   checkDoor(doorPos: { x: number; y: number }): boolean {
-    const doorBox: AABB = { x: doorPos.x, y: doorPos.y, width: TILE_SIZE, height: TILE_SIZE };
+    const doorBox: AABB = {
+      x: doorPos.x,
+      y: doorPos.y,
+      width: TILE_SIZE,
+      height: TILE_SIZE,
+    };
     return aabbOverlap(this.getAABB(), doorBox);
   }
 }
@@ -259,12 +308,23 @@ export class Knight extends Player {
 
   constructor(x: number, y: number) {
     super(x, y);
-    this.normalSprite = new SpriteSheet('/sprites/Knight_Normal.png', KNIGHT_SPRITE);
-    this.ghostSprite = new SpriteSheet('/sprites/Knight_Ghost.png', KNIGHT_SPRITE);
+    this.normalSprite = new SpriteSheet(
+      "/sprites/Knight_Normal.png",
+      KNIGHT_SPRITE,
+    );
+    this.ghostSprite = new SpriteSheet(
+      "/sprites/Knight_Ghost.png",
+      KNIGHT_SPRITE,
+    );
     this.spriteSheet = this.normalSprite;
   }
 
-  update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, world: GameWorldState): void {
+  update(
+    input: PlayerInput,
+    grid: number[][],
+    solidTypes: Set<number>,
+    world: GameWorldState,
+  ): void {
     const dt = 16.67;
 
     if (input.ability && !this.ghostMode && this.ghostCooldown <= 0) {
@@ -297,11 +357,11 @@ export class Knight extends Player {
 
     const config = KNIGHT_SPRITE;
     if (!this.grounded) {
-      this.updateAnimation('jump', config.jump!.speed);
+      this.updateAnimation("jump", config.jump!.speed);
     } else if (this.vx !== 0) {
-      this.updateAnimation('run', config.run.speed);
+      this.updateAnimation("run", config.run.speed);
     } else {
-      this.updateAnimation('idle', config.idle.speed);
+      this.updateAnimation("idle", config.idle.speed);
     }
   }
 
@@ -309,7 +369,7 @@ export class Knight extends Player {
     const alpha = this.ghostMode ? 0.5 : 1.0;
     if (this.ghostMode) {
       ctx.save();
-      ctx.shadowColor = '#88CCFF';
+      ctx.shadowColor = "#88CCFF";
       ctx.shadowBlur = 15;
       this.drawSprite(ctx, alpha);
       ctx.restore();
@@ -324,36 +384,36 @@ export class Knight extends Player {
     const barW = 100;
     const barH = 8;
 
-    ctx.fillStyle = '#333';
+    ctx.fillStyle = "#333";
     ctx.fillRect(barX, barY, barW, barH);
 
     if (this.ghostMode) {
       const pct = Math.max(0, this.ghostTimer / GHOST_DURATION);
-      ctx.fillStyle = '#88CCFF';
+      ctx.fillStyle = "#88CCFF";
       ctx.fillRect(barX, barY, barW * pct, barH);
     } else {
       const pct = Math.max(0, 1 - this.ghostCooldown / GHOST_COOLDOWN);
-      ctx.fillStyle = pct >= 1 ? '#44AA44' : '#886622';
+      ctx.fillStyle = pct >= 1 ? "#44AA44" : "#886622";
       ctx.fillRect(barX, barY, barW * pct, barH);
     }
 
-    ctx.strokeStyle = '#FFF';
+    ctx.strokeStyle = "#FFF";
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barW, barH);
 
-    ctx.fillStyle = '#FFF';
-    ctx.font = '9px monospace';
+    ctx.fillStyle = "#FFF";
+    ctx.font = "9px monospace";
     if (this.ghostMode) {
-      ctx.fillText('GHOST', barX + barW + 4, barY + 8);
+      ctx.fillText("GHOST", barX + barW + 4, barY + 8);
     } else if (this.ghostCooldown > 0) {
-      ctx.fillText('RECHARGE', barX + barW + 4, barY + 8);
+      ctx.fillText("RECHARGE", barX + barW + 4, barY + 8);
     } else {
-      ctx.fillText('READY', barX + barW + 4, barY + 8);
+      ctx.fillText("READY", barX + barW + 4, barY + 8);
     }
 
-    ctx.fillStyle = '#CC4444';
-    ctx.font = 'bold 10px monospace';
-    ctx.fillText('KNIGHT', barX, barY + 22);
+    ctx.fillStyle = "#CC4444";
+    ctx.font = "bold 10px monospace";
+    ctx.fillText("KNIGHT", barX, barY + 22);
   }
 }
 
@@ -368,10 +428,15 @@ export class Thief extends Player {
 
   constructor(x: number, y: number) {
     super(x, y);
-    this.spriteSheet = new SpriteSheet('/sprites/Thief.png', THIEF_SPRITE);
+    this.spriteSheet = new SpriteSheet("/sprites/Thief.png", THIEF_SPRITE);
   }
 
-  update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, world: GameWorldState): void {
+  update(
+    input: PlayerInput,
+    grid: number[][],
+    solidTypes: Set<number>,
+    world: GameWorldState,
+  ): void {
     if (input.crouch && this.grounded) {
       this.crouching = !this.crouching;
       if (this.crouching) {
@@ -405,14 +470,14 @@ export class Thief extends Player {
 
     const config = THIEF_SPRITE;
     if (this.crouching) {
-      this.updateAnimation('crouch', config.crouch!.speed);
+      this.updateAnimation("crouch", config.crouch!.speed);
     } else if (!this.grounded) {
       // Airborne: use idle (single pose) to avoid run cycle in mid-air
-      this.updateAnimation('idle', config.idle.speed);
+      this.updateAnimation("idle", config.idle.speed);
     } else if (this.vx !== 0) {
-      this.updateAnimation('run', config.run.speed);
+      this.updateAnimation("run", config.run.speed);
     } else {
-      this.updateAnimation('idle', config.idle.speed);
+      this.updateAnimation("idle", config.idle.speed);
     }
   }
 
@@ -422,16 +487,22 @@ export class Thief extends Player {
 
     if (this.portals.length < 2) {
       this.portals.push({
-        x: portalX, y: portalY,
-        width: 16, height: 48,
-        color: this.portals.length === 0 ? '#FF6600' : '#0066FF',
+        x: portalX,
+        y: portalY,
+        width: 16,
+        height: 48,
+        color: this.portals.length === 0 ? "#FF6600" : "#0066FF",
       });
     } else {
-      this.portals = [{
-        x: portalX, y: portalY,
-        width: 16, height: 48,
-        color: '#FF6600',
-      }];
+      this.portals = [
+        {
+          x: portalX,
+          y: portalY,
+          width: 16,
+          height: 48,
+          color: "#FF6600",
+        },
+      ];
     }
     this.portalCooldown = PORTAL_COOLDOWN;
   }
@@ -442,7 +513,12 @@ export class Thief extends Player {
     for (let i = 0; i < 2; i++) {
       const portal = this.portals[i];
       const other = this.portals[1 - i];
-      const portalBox: AABB = { x: portal.x, y: portal.y, width: portal.width, height: portal.height };
+      const portalBox: AABB = {
+        x: portal.x,
+        y: portal.y,
+        width: portal.width,
+        height: portal.height,
+      };
       if (aabbOverlap(playerBox, portalBox)) {
         this.x = other.x + other.width / 2 - this.width / 2;
         this.y = other.y;
@@ -468,16 +544,26 @@ export class Thief extends Player {
     ctx.fillStyle = portal.color;
     ctx.beginPath();
     ctx.ellipse(
-      portal.x + portal.width / 2, portal.y + portal.height / 2,
-      portal.width / 2, portal.height / 2, 0, 0, Math.PI * 2,
+      portal.x + portal.width / 2,
+      portal.y + portal.height / 2,
+      portal.width / 2,
+      portal.height / 2,
+      0,
+      0,
+      Math.PI * 2,
     );
     ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = "#FFFFFF";
     ctx.globalAlpha = 0.5 + Math.sin(time * 2) * 0.3;
     ctx.beginPath();
     ctx.ellipse(
-      portal.x + portal.width / 2, portal.y + portal.height / 2,
-      portal.width / 4, portal.height / 4, time, 0, Math.PI * 2,
+      portal.x + portal.width / 2,
+      portal.y + portal.height / 2,
+      portal.width / 4,
+      portal.height / 4,
+      time,
+      0,
+      Math.PI * 2,
     );
     ctx.fill();
     ctx.restore();
@@ -489,34 +575,43 @@ export class Thief extends Player {
     const barW = 100;
     const barH = 8;
 
-    ctx.fillStyle = '#333';
+    ctx.fillStyle = "#333";
     ctx.fillRect(barX, barY, barW, barH);
     const pct = Math.max(0, 1 - this.portalCooldown / PORTAL_COOLDOWN);
-    ctx.fillStyle = '#FF6600';
+    ctx.fillStyle = "#FF6600";
     ctx.fillRect(barX, barY, barW * pct, barH);
-    ctx.strokeStyle = '#FFF';
+    ctx.strokeStyle = "#FFF";
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barW, barH);
 
-    ctx.fillStyle = '#FFF';
-    ctx.font = '9px monospace';
+    ctx.fillStyle = "#FFF";
+    ctx.font = "9px monospace";
     ctx.fillText(`PORTAL ${this.portals.length}/2`, barX + barW + 4, barY + 8);
 
-    ctx.fillStyle = '#44AA88';
-    ctx.font = 'bold 10px monospace';
-    ctx.fillText('THIEF', barX, barY + 22);
+    ctx.fillStyle = "#44AA88";
+    ctx.font = "bold 10px monospace";
+    ctx.fillText("THIEF", barX, barY + 22);
   }
 }
 
 // Helper
-function checkStandCollision(box: AABB, grid: number[][], solidTypes: Set<number>): boolean {
+function checkStandCollision(
+  box: AABB,
+  grid: number[][],
+  solidTypes: Set<number>,
+): boolean {
   const startCol = Math.floor(box.x / TILE_SIZE);
   const endCol = Math.floor((box.x + box.width - 1) / TILE_SIZE);
   const startRow = Math.floor(box.y / TILE_SIZE);
   const endRow = Math.floor((box.y + box.height - 1) / TILE_SIZE);
   for (let row = startRow; row <= endRow; row++) {
     for (let col = startCol; col <= endCol; col++) {
-      if (row >= 0 && row < grid.length && col >= 0 && col < (grid[0]?.length ?? 0)) {
+      if (
+        row >= 0 &&
+        row < grid.length &&
+        col >= 0 &&
+        col < (grid[0]?.length ?? 0)
+      ) {
         if (solidTypes.has(grid[row][col])) return true;
       }
     }

@@ -35,13 +35,13 @@ export const TUTORIAL_LEVEL: LevelData = {
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 0 ceiling
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 1
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 2
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 3
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 4
-    [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 5
-    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, S, S, S], // 6 platform with ghost wall in middle
-    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, L, S, S, S, S, S, S, S, S], // 7 lever on platform
-    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, S, S, S], // 8 platform continues
-    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, D], // 9 door at far right
+    [S, _, _, _, _, _, _, _, _, _, _, W, W, W, _, _, _, _, _, _, _, _, _, _, S], // 3 phasable wall (3 blocks up)
+    [S, _, _, _, _, _, _, _, _, _, _, W, W, W, _, _, _, _, _, _, _, _, _, _, S], // 4
+    [S, _, _, _, _, _, _, _, _, _, _, W, W, W, _, _, L, _, _, _, _, _, _, D, S], // 5 lever 2 up, door 4 up 1 left
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 6 platform
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 7
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 8 platform continues
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 9
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 10 floor
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 11
   ],
@@ -51,13 +51,13 @@ export const TUTORIAL_LEVEL: LevelData = {
   knightSpawn: { x: 1 * 32, y: 6 * 32 - 48 },
   thiefSpawn:  { x: 2 * 32, y: 6 * 32 - 48 },
 
-  // Door at col 24, row 9 (on the platform)
-  doorPos: { x: 24, y: 9 },
+  // Door at col 23, row 5 (4 blocks up, 1 left from original)
+  doorPos: { x: 23, y: 5 },
 
   cratePositions: [],
 
-  // Lever at col 16, row 7 (on the platform, right of the wall)
-  leverPosition: { x: 16, y: 7 },
+  // Lever at col 16, row 5 (2 blocks up)
+  leverPosition: { x: 16, y: 5 },
 
   // No bridge tiles needed for this level
   bridgePositions: [],

@@ -280,8 +280,7 @@ export function renderWorld(
     }
   }
 
-  // Draw door (doorPos is already in world coordinates from game.ts)
-  drawDoor(ctx, doorPos.x, doorPos.y);
+  // Door is drawn once from the grid (TileType.DOOR); doorPos is used only for win logic
 
   // Draw crates
   for (const crate of crates) crate.draw(ctx);
