@@ -10,7 +10,7 @@ import {
   renderWorld, renderMenu, renderWinScreen,
   renderTutorialHints, renderPauseMenu, type PauseTab,
 } from './renderer';
-import { aabbOverlap } from './physics';
+import { aabbOverlap, type AABB } from './physics';
 
 export type GameState = 'menu' | 'playing' | 'paused' | 'win';
 
@@ -52,7 +52,7 @@ export class Game {
   pauseSelectedIndex: number = 0;
   pauseRebindingKey: string | null = null;
   pauseMainItems = ['Resume', 'Controls', 'Restart Level', 'Quit to Menu'];
-  pauseControlItems = 10; // 4 knight + 5 thief + 1 back
+  pauseControlItems = 12; // 5 knight + 6 thief + 1 back
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -205,8 +205,8 @@ export class Game {
       }
 
       const bindKeys: (keyof KeyBindings)[] = [
-        'p1Left', 'p1Right', 'p1Jump', 'p1Ability',
-        'p2Left', 'p2Right', 'p2Jump', 'p2Ability', 'p2Crouch',
+        'p1Left', 'p1Right', 'p1Jump', 'p1Ability', 'p1Interact',
+        'p2Left', 'p2Right', 'p2Jump', 'p2Ability', 'p2Crouch', 'p2Interact',
       ];
       const bindKey = bindKeys[this.pauseSelectedIndex];
       if (bindKey) {
@@ -252,29 +252,19 @@ export class Game {
       crate.update(this.grid, solids);
     }
 
-    // Lever interaction - either player can pull
+    // Lever interaction - either player can pull by pressing interact key while near it
     if (!this.worldState.leverPulled) {
       const leverPos = TUTORIAL_LEVEL.leverPosition;
       const leverBox = { x: leverPos.x, y: leverPos.y, width: TILE_SIZE, height: TILE_SIZE };
-      if (aabbOverlap(this.thief.getAABB(), leverBox) || aabbOverlap(this.knight.getAABB(), leverBox)) {
-        this.worldState.leverPulled = true;
-        this.worldState.bridgeActive = true;
-
-        // Activate bridge tiles
-        for (const bp of TUTORIAL_LEVEL.bridgePositions) {
-          if (this.grid[bp.y]) {
-            this.grid[bp.y][bp.x] = TileType.BRIDGE;
-          }
-        }
-
-        // Remove all ghost wall tiles from the grid so the Thief can pass
-        for (let row = 0; row < this.grid.length; row++) {
-          for (let col = 0; col < this.grid[row].length; col++) {
-            if (this.grid[row][col] === TileType.WALL_GHOST) {
-              this.grid[row][col] = TileType.EMPTY;
-            }
-          }
-        }
+      
+      // Check if Knight is near lever and presses interact
+      if ((aabbOverlap(this.knight.getAABB(), leverBox) || this.isNearLever(this.knight.getAABB(), leverPos)) && p1Input.interact) {
+        this.activateLever();
+      }
+      
+      // Check if Thief is near lever and presses interact
+      if ((aabbOverlap(this.thief.getAABB(), leverBox) || this.isNearLever(this.thief.getAABB(), leverPos)) && p2Input.interact) {
+        this.activateLever();
       }
     }
 
@@ -315,6 +305,41 @@ export class Game {
       case 'win':
         renderWinScreen(this.ctx);
         break;
+    }
+  }
+
+  private isNearLever(playerBox: AABB, leverPos: { x: number; y: number }): boolean {
+    // Check if player is within 60 pixels of lever
+    const leverCenterX = leverPos.x + TILE_SIZE / 2;
+    const leverCenterY = leverPos.y + TILE_SIZE / 2;
+    const playerCenterX = playerBox.x + playerBox.width / 2;
+    const playerCenterY = playerBox.y + playerBox.height / 2;
+    
+    const dx = leverCenterX - playerCenterX;
+    const dy = leverCenterY - playerCenterY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    return distance < 60;
+  }
+
+  private activateLever(): void {
+    this.worldState.leverPulled = true;
+    this.worldState.bridgeActive = true;
+
+    // Activate bridge tiles
+    for (const bp of TUTORIAL_LEVEL.bridgePositions) {
+      if (this.grid[bp.y]) {
+        this.grid[bp.y][bp.x] = TileType.BRIDGE;
+      }
+    }
+
+    // Remove all ghost wall tiles from the grid so the Thief can pass
+    for (let row = 0; row < this.grid.length; row++) {
+      for (let col = 0; col < this.grid[row].length; col++) {
+        if (this.grid[row][col] === TileType.WALL_GHOST) {
+          this.grid[row][col] = TileType.EMPTY;
+        }
+      }
     }
   }
 
