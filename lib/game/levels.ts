@@ -21,7 +21,7 @@ export interface LevelData {
 }
 
 // Simple co-op puzzle:
-// Both players start on the left on a platform.
+// Both players start on the left on a continuous platform.
 // A ghost wall (W) blocks the path in the middle.
 // The Knight uses ghost mode to phase through the wall and reach the lever.
 // Knight stands on the lever tile and presses E to activate it.
@@ -38,25 +38,25 @@ export const TUTORIAL_LEVEL: LevelData = {
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 3
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 4
     [S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S], // 5
-    [S, S, S, S, _, _, _, _, _, _, _, W, W, W, _, _, _, _, _, _, _, _, S, S, S], // 6 platform with ghost wall blocking
-    [S, S, S, S, _, _, _, _, _, _, _, W, W, W, _, _, L, _, _, _, _, _, S, S, S], // 7 lever on right side
-    [S, S, S, S, _, _, _, _, _, _, _, W, W, W, _, _, _, _, _, _, _, _, S, S, S], // 8 platform continues right
-    [S, S, S, S, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, S, S, D], // 9 door at far right
+    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, S, S, S], // 6 platform with ghost wall in middle
+    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, L, S, S, S, S, S, S, S, S], // 7 lever on platform
+    [S, S, S, S, S, S, S, S, S, S, S, W, W, W, S, S, S, S, S, S, S, S, S, S, S], // 8 platform continues
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, D], // 9 door at far right
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 10 floor
     [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S], // 11
   ],
 
   // Ground is top of row 10 (y = 10*32 = 320). Player height = 48.
-  // Spawn y = 320 - 48 = 272
+  // Platform is rows 6-8, spawn at row 6
   knightSpawn: { x: 1 * 32, y: 6 * 32 - 48 },
   thiefSpawn:  { x: 2 * 32, y: 6 * 32 - 48 },
 
-  // Door at col 24, row 9
+  // Door at col 24, row 9 (on the platform)
   doorPos: { x: 24, y: 9 },
 
   cratePositions: [],
 
-  // Lever at col 16, row 7 (on the platform)
+  // Lever at col 16, row 7 (on the platform, right of the wall)
   leverPosition: { x: 16, y: 7 },
 
   // No bridge tiles needed for this level
