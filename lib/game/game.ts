@@ -252,16 +252,27 @@ export class Game {
       crate.update(this.grid, solids);
     }
 
-    // Lever interaction (Thief walks to lever)
+    // Lever interaction - either player can pull
     if (!this.worldState.leverPulled) {
       const leverPos = TUTORIAL_LEVEL.leverPosition;
       const leverBox = { x: leverPos.x, y: leverPos.y, width: TILE_SIZE, height: TILE_SIZE };
       if (aabbOverlap(this.thief.getAABB(), leverBox) || aabbOverlap(this.knight.getAABB(), leverBox)) {
         this.worldState.leverPulled = true;
         this.worldState.bridgeActive = true;
+
+        // Activate bridge tiles
         for (const bp of TUTORIAL_LEVEL.bridgePositions) {
           if (this.grid[bp.y]) {
             this.grid[bp.y][bp.x] = TileType.BRIDGE;
+          }
+        }
+
+        // Remove all ghost wall tiles from the grid so the Thief can pass
+        for (let row = 0; row < this.grid.length; row++) {
+          for (let col = 0; col < this.grid[row].length; col++) {
+            if (this.grid[row][col] === TileType.WALL_GHOST) {
+              this.grid[row][col] = TileType.EMPTY;
+            }
           }
         }
       }

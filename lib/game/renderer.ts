@@ -385,7 +385,7 @@ export function renderMenu(ctx: CanvasRenderingContext2D): void {
   ctx.fillText('Arrow Keys to Move  |  DOWN to Crouch  |  ENTER for Portal', centerX, centerY + 157);
   ctx.fillStyle = '#FFD70088';
   ctx.font = '10px monospace';
-  ctx.fillText('Work together! Stand on pressure plates to open paths.', centerX, centerY + 182);
+  ctx.fillText('The Knight can phase through ghost walls. Pull the lever to clear the path for the Thief!', centerX, centerY + 182);
   ctx.fillText('Both players must reach the golden door to win.', centerX, centerY + 196);
 }
 
@@ -629,17 +629,11 @@ export function renderTutorialHints(
   let color = '#FFAA44';
 
   if (!gameState.leverPulled) {
-    hint = 'Explore together! The Thief can crouch under low ceilings. Find the lever to open the bridge.';
-    color = '#FFAA44';
-  } else if (!gameState.knightOnButton && !gameState.thiefOnButton) {
-    hint = 'Stand on pressure plates to open paths for each other! Ghost walls block only the Knight normally.';
+    hint = 'A ghost wall blocks the path! Knight: press SHIFT to phase through, then pull the lever behind it.';
     color = '#88CCFF';
-  } else if (gameState.knightOnButton) {
-    hint = 'Knight plate active! Thief path ahead is open - go now!';
-    color = '#CC4444';
-  } else if (gameState.thiefOnButton) {
-    hint = 'Thief plate active! Knight path ahead is open - go now!';
-    color = '#44AA88';
+  } else {
+    hint = 'The ghost wall is gone! Both players head right to the golden door.';
+    color = '#44FF44';
   }
 
   if (hint) {
