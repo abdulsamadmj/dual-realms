@@ -16,7 +16,6 @@ export default function GameCanvas() {
 
     let mounted = true;
 
-    // Dynamic import to avoid SSR issues
     import('@/lib/game/game').then(({ Game }) => {
       if (!mounted) return;
       const game = new Game(canvas);
@@ -68,7 +67,6 @@ export default function GameCanvas() {
         aria-label="Dual Realms - Cooperative Platformer Game"
       />
 
-      {/* Fullscreen toggle */}
       <button
         onClick={toggleFullscreen}
         className="absolute top-2 right-2 px-2 py-1 text-xs font-mono rounded"
@@ -82,7 +80,6 @@ export default function GameCanvas() {
         {isFullscreen ? 'EXIT' : 'FULLSCREEN'}
       </button>
 
-      {/* State indicator */}
       {gameState === 'playing' && (
         <div
           className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-mono rounded"
@@ -92,7 +89,7 @@ export default function GameCanvas() {
             border: '1px solid rgba(255,255,255,0.1)',
           }}
         >
-          Both players must reach the golden door
+          {'ESC to pause  |  Both players must reach the golden door'}
         </div>
       )}
     </div>

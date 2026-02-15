@@ -7,8 +7,9 @@ export const GRAVITY = 0.6;
 export const MAX_FALL_SPEED = 12;
 export const PLAYER_SPEED = 3;
 export const JUMP_FORCE = -10;
-export const GHOST_COOLDOWN = 3000; // ms
-export const PORTAL_COOLDOWN = 4000; // ms
+export const GHOST_DURATION = 3000;   // ms - how long ghost mode lasts
+export const GHOST_COOLDOWN = 5000;   // ms - cooldown before you can use it again
+export const PORTAL_COOLDOWN = 4000;  // ms
 
 // Canvas dimensions
 export const CANVAS_WIDTH = 800;
@@ -42,16 +43,20 @@ export const THIEF_SPRITE = {
 export enum TileType {
   EMPTY = 0,
   SOLID = 1,
-  BRIDGE = 2,      // Appears when lever is pulled
-  LEVER = 3,       // Interactive lever
-  DOOR = 4,        // Level exit
-  CRATE = 5,       // Movable crate
-  LOW_TUNNEL = 6,  // Requires crouching
-  WALL_GHOST = 7,  // Knight can ghost through
-  GAP = 8,         // Gap where crate can fall
-  PORTAL_ZONE = 9, // Area for portal placement
-  LEDGE = 10,      // Higher platform
-  SPIKE = 11,      // Decorative top spike
+  BRIDGE = 2,         // Appears when lever is pulled
+  LEVER = 3,          // Interactive lever
+  DOOR = 4,           // Level exit
+  CRATE = 5,          // Movable crate
+  LOW_TUNNEL = 6,     // Requires crouching
+  WALL_GHOST = 7,     // Knight can ghost through
+  GAP = 8,            // Gap where crate can fall
+  PORTAL_ZONE = 9,    // Area for portal placement
+  LEDGE = 10,         // Higher platform
+  SPIKE = 11,         // Deadly spikes - resets player
+  BUTTON_KNIGHT = 12, // Pressure plate the Knight stands on -> affects bottom
+  BUTTON_THIEF = 13,  // Pressure plate the Thief stands on -> affects top
+  RETRACT_WALL = 14,  // Wall that retracts when button is active
+  MOVING_PLAT = 15,   // Moving platform toggled by other player's button
 }
 
 // Colors for tile rendering
@@ -65,4 +70,8 @@ export const TILE_COLORS: Record<number, string> = {
   [TileType.WALL_GHOST]: '#6B5B73',
   [TileType.LEDGE]: '#4a3728',
   [TileType.SPIKE]: '#4a3728',
+  [TileType.BUTTON_KNIGHT]: '#CC4444',
+  [TileType.BUTTON_THIEF]: '#44AA88',
+  [TileType.RETRACT_WALL]: '#887744',
+  [TileType.MOVING_PLAT]: '#4488CC',
 };

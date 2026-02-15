@@ -3,7 +3,7 @@
 // ============================================================
 
 import {
-  TILE_SIZE, PLAYER_SPEED, JUMP_FORCE, GHOST_COOLDOWN, PORTAL_COOLDOWN,
+  TILE_SIZE, PLAYER_SPEED, JUMP_FORCE, GHOST_DURATION, GHOST_COOLDOWN, PORTAL_COOLDOWN,
   KNIGHT_SPRITE, THIEF_SPRITE, TileType,
 } from './constants';
 import { SpriteSheet, Animator } from './sprites';
@@ -69,58 +69,6 @@ export class Crate {
   }
 }
 
-// ---- Helper: resolve entity-vs-crate collision ----
-
-function resolveEntityVsCrates(
-  entity: AABB,
-  vx: number,
-  vy: number,
-  crates: Crate[],
-): { x: number; y: number; vx: number; vy: number; grounded: boolean; pushedCrate: Crate | null } {
-  let { x, y } = entity;
-  let outVx = vx;
-  let outVy = vy;
-  let grounded = false;
-  let pushedCrate: Crate | null = null;
-
-  // Horizontal pass
-  const hBox: AABB = { x: x + vx, y, width: entity.width, height: entity.height };
-  for (const crate of crates) {
-    const cb = crate.getAABB();
-    if (aabbOverlap(hBox, cb)) {
-      if (vx > 0) {
-        // Push crate to the right
-        hBox.x = cb.x - entity.width;
-        pushedCrate = crate;
-      } else if (vx < 0) {
-        hBox.x = cb.x + cb.width;
-        pushedCrate = crate;
-      }
-      outVx = 0;
-    }
-  }
-  x = hBox.x;
-
-  // Vertical pass
-  const vBox: AABB = { x, y: y + vy, width: entity.width, height: entity.height };
-  for (const crate of crates) {
-    const cb = crate.getAABB();
-    if (aabbOverlap(vBox, cb)) {
-      if (vy > 0) {
-        // Landing on top of crate
-        vBox.y = cb.y - entity.height;
-        grounded = true;
-      } else if (vy < 0) {
-        vBox.y = cb.y + cb.height;
-      }
-      outVy = 0;
-    }
-  }
-  y = vBox.y;
-
-  return { x, y, vx: outVx, vy: outVy, grounded, pushedCrate };
-}
-
 // ---- Helper: check if touching spike tiles ----
 
 function checkSpikeCollision(box: AABB, grid: number[][]): boolean {
@@ -134,6 +82,24 @@ function checkSpikeCollision(box: AABB, grid: number[][]): boolean {
       if (row >= 0 && row < grid.length && col >= 0 && col < (grid[0]?.length ?? 0)) {
         if (grid[row][col] === TileType.SPIKE) return true;
       }
+    }
+  }
+  return false;
+}
+
+// ---- Helper: check if standing on a specific tile type ----
+
+export function isStandingOnTile(box: AABB, grid: number[][], tileType: number): boolean {
+  // Check one pixel below feet
+  const feetY = box.y + box.height + 1;
+  const startCol = Math.floor(box.x / TILE_SIZE);
+  const endCol = Math.floor((box.x + box.width - 1) / TILE_SIZE);
+  const row = Math.floor(feetY / TILE_SIZE);
+
+  if (row < 0 || row >= grid.length) return false;
+  for (let col = startCol; col <= endCol; col++) {
+    if (col >= 0 && col < (grid[0]?.length ?? 0)) {
+      if (grid[row][col] === tileType) return true;
     }
   }
   return false;
@@ -154,7 +120,6 @@ export abstract class Player {
   spriteSheet!: SpriteSheet;
   reachedDoor: boolean = false;
 
-  // Spawn position for respawn on spike hit
   spawnX: number;
   spawnY: number;
 
@@ -218,24 +183,14 @@ export abstract class Player {
     this.grounded = vResult.grounded;
 
     // 2) Resolve vs crates
-    const crateResult = resolveEntityVsCrates(
-      this.getAABB(),
-      0, // already resolved against tiles
-      0,
-      crates,
-    );
-
-    // Check with remaining velocity if overlapping
     const afterTileBox = this.getAABB();
     for (const crate of crates) {
       const cb = crate.getAABB();
       if (aabbOverlap(afterTileBox, cb)) {
-        // We are inside a crate - push us out
         const overlapLeft = (afterTileBox.x + afterTileBox.width) - cb.x;
         const overlapRight = (cb.x + cb.width) - afterTileBox.x;
         const overlapTop = (afterTileBox.y + afterTileBox.height) - cb.y;
         const overlapBottom = (cb.y + cb.height) - afterTileBox.y;
-
         const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
         if (minOverlap === overlapTop && this.vy >= 0) {
@@ -247,11 +202,9 @@ export abstract class Player {
           this.vy = 0;
         } else if (minOverlap === overlapLeft) {
           this.x = cb.x - this.width;
-          // Push crate right
           crate.x += 2;
         } else if (minOverlap === overlapRight) {
           this.x = cb.x + cb.width;
-          // Push crate left
           crate.x -= 2;
         }
       }
@@ -277,14 +230,10 @@ export abstract class Player {
     const drawX = this.x - 20;
     const drawY = this.y - 16;
     this.spriteSheet.draw(
-      ctx,
-      drawX,
-      drawY,
+      ctx, drawX, drawY,
       this.animator.currentAnimation,
       this.animator.getFrame(),
-      !this.facingRight,
-      alpha,
-      2.0,
+      !this.facingRight, alpha, 2.0,
     );
   }
 
@@ -298,7 +247,8 @@ export abstract class Player {
 
 export class Knight extends Player {
   ghostMode: boolean = false;
-  ghostCooldown: number = 0;
+  ghostTimer: number = 0;     // Remaining duration of ghost mode
+  ghostCooldown: number = 0;  // Cooldown before can activate again
   normalSprite!: SpriteSheet;
   ghostSprite!: SpriteSheet;
 
@@ -310,14 +260,30 @@ export class Knight extends Player {
   }
 
   update(input: PlayerInput, grid: number[][], solidTypes: Set<number>, gameState: GameWorldState): void {
-    // Toggle ghost mode
-    if (input.ability && this.ghostCooldown <= 0) {
-      this.ghostMode = !this.ghostMode;
-      this.ghostCooldown = GHOST_COOLDOWN;
-      this.spriteSheet = this.ghostMode ? this.ghostSprite : this.normalSprite;
+    const dt = 16.67;
+
+    // Ghost mode: ability activates it, it auto-deactivates after GHOST_DURATION
+    if (input.ability && !this.ghostMode && this.ghostCooldown <= 0) {
+      this.ghostMode = true;
+      this.ghostTimer = GHOST_DURATION;
+      this.spriteSheet = this.ghostSprite;
     }
+
+    // Count down active ghost timer
+    if (this.ghostMode) {
+      this.ghostTimer -= dt;
+      if (this.ghostTimer <= 0) {
+        this.ghostMode = false;
+        this.ghostTimer = 0;
+        this.ghostCooldown = GHOST_COOLDOWN;
+        this.spriteSheet = this.normalSprite;
+      }
+    }
+
+    // Count down cooldown
     if (this.ghostCooldown > 0) {
-      this.ghostCooldown -= 16.67;
+      this.ghostCooldown -= dt;
+      if (this.ghostCooldown < 0) this.ghostCooldown = 0;
     }
 
     // Adjust solid types based on ghost mode
@@ -326,7 +292,6 @@ export class Knight extends Player {
       activeSolids.delete(TileType.WALL_GHOST);
     }
 
-    // Get crates on the same platform
     const myCrates = gameState.crates.filter(c => c.platform === 'top');
     this.baseMovement(input, grid, activeSolids, myCrates);
 
@@ -343,7 +308,6 @@ export class Knight extends Player {
 
   draw(ctx: CanvasRenderingContext2D): void {
     const alpha = this.ghostMode ? 0.5 : 1.0;
-
     if (this.ghostMode) {
       ctx.save();
       ctx.shadowColor = '#88CCFF';
@@ -361,12 +325,21 @@ export class Knight extends Player {
     const barW = 100;
     const barH = 8;
 
+    // Background bar
     ctx.fillStyle = '#333';
     ctx.fillRect(barX, barY, barW, barH);
 
-    const cooldownPercent = Math.max(0, 1 - this.ghostCooldown / GHOST_COOLDOWN);
-    ctx.fillStyle = this.ghostMode ? '#88CCFF' : '#44AA44';
-    ctx.fillRect(barX, barY, barW * cooldownPercent, barH);
+    if (this.ghostMode) {
+      // Show remaining duration (draining)
+      const durationPercent = Math.max(0, this.ghostTimer / GHOST_DURATION);
+      ctx.fillStyle = '#88CCFF';
+      ctx.fillRect(barX, barY, barW * durationPercent, barH);
+    } else {
+      // Show cooldown recovery (filling up)
+      const readyPercent = Math.max(0, 1 - this.ghostCooldown / GHOST_COOLDOWN);
+      ctx.fillStyle = readyPercent >= 1 ? '#44AA44' : '#886622';
+      ctx.fillRect(barX, barY, barW * readyPercent, barH);
+    }
 
     ctx.strokeStyle = '#FFF';
     ctx.lineWidth = 1;
@@ -374,11 +347,17 @@ export class Knight extends Player {
 
     ctx.fillStyle = '#FFF';
     ctx.font = '10px monospace';
-    ctx.fillText(this.ghostMode ? 'GHOST' : 'SOLID', barX + barW + 5, barY + 8);
+    if (this.ghostMode) {
+      ctx.fillText('GHOST ACTIVE', barX + barW + 5, barY + 8);
+    } else if (this.ghostCooldown > 0) {
+      ctx.fillText('RECHARGING', barX + barW + 5, barY + 8);
+    } else {
+      ctx.fillText('GHOST READY', barX + barW + 5, barY + 8);
+    }
 
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px monospace';
-    ctx.fillText('KNIGHT (WASD + Shift)', barX, barY + 24);
+    ctx.fillText('KNIGHT', barX, barY + 24);
   }
 }
 
@@ -453,21 +432,16 @@ export class Thief extends Player {
 
     if (this.portals.length < 2) {
       this.portals.push({
-        x: portalX,
-        y: portalY,
-        width: 16,
-        height: 48,
+        x: portalX, y: portalY,
+        width: 16, height: 48,
         color: this.portals.length === 0 ? '#FF6600' : '#0066FF',
         animFrame: 0,
       });
     } else {
       this.portals = [{
-        x: portalX,
-        y: portalY,
-        width: 16,
-        height: 48,
-        color: '#FF6600',
-        animFrame: 0,
+        x: portalX, y: portalY,
+        width: 16, height: 48,
+        color: '#FF6600', animFrame: 0,
       }];
     }
     this.portalCooldown = PORTAL_COOLDOWN;
@@ -475,14 +449,11 @@ export class Thief extends Player {
 
   private checkPortalTeleport(): void {
     if (this.portals.length < 2) return;
-
     const playerBox = this.getAABB();
-
     for (let i = 0; i < 2; i++) {
       const portal = this.portals[i];
       const otherPortal = this.portals[1 - i];
       const portalBox: AABB = { x: portal.x, y: portal.y, width: portal.width, height: portal.height };
-
       if (aabbOverlap(playerBox, portalBox)) {
         this.x = otherPortal.x + otherPortal.width / 2 - this.width / 2;
         this.y = otherPortal.y;
@@ -502,34 +473,24 @@ export class Thief extends Player {
 
   private drawPortal(ctx: CanvasRenderingContext2D, portal: Portal): void {
     const time = Date.now() / 200;
-
     ctx.save();
     ctx.shadowColor = portal.color;
     ctx.shadowBlur = 12 + Math.sin(time) * 4;
-
     ctx.fillStyle = portal.color;
     ctx.beginPath();
     ctx.ellipse(
-      portal.x + portal.width / 2,
-      portal.y + portal.height / 2,
-      portal.width / 2,
-      portal.height / 2,
-      0, 0, Math.PI * 2,
+      portal.x + portal.width / 2, portal.y + portal.height / 2,
+      portal.width / 2, portal.height / 2, 0, 0, Math.PI * 2,
     );
     ctx.fill();
-
     ctx.fillStyle = '#FFFFFF';
     ctx.globalAlpha = 0.5 + Math.sin(time * 2) * 0.3;
     ctx.beginPath();
     ctx.ellipse(
-      portal.x + portal.width / 2,
-      portal.y + portal.height / 2,
-      portal.width / 4,
-      portal.height / 4,
-      time, 0, Math.PI * 2,
+      portal.x + portal.width / 2, portal.y + portal.height / 2,
+      portal.width / 4, portal.height / 4, time, 0, Math.PI * 2,
     );
     ctx.fill();
-
     ctx.restore();
   }
 
@@ -541,11 +502,9 @@ export class Thief extends Player {
 
     ctx.fillStyle = '#333';
     ctx.fillRect(barX, barY, barW, barH);
-
     const cooldownPercent = Math.max(0, 1 - this.portalCooldown / PORTAL_COOLDOWN);
     ctx.fillStyle = '#FF6600';
     ctx.fillRect(barX, barY, barW * cooldownPercent, barH);
-
     ctx.strokeStyle = '#FFF';
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barW, barH);
@@ -553,7 +512,6 @@ export class Thief extends Player {
     ctx.fillStyle = '#FFF';
     ctx.font = '10px monospace';
     ctx.fillText(`PORTAL (${this.portals.length}/2)`, barX + barW + 5, barY + 8);
-
     if (this.crouching) {
       ctx.fillStyle = '#FFAA00';
       ctx.fillText('CROUCHING', barX + barW + 80, barY + 8);
@@ -561,17 +519,16 @@ export class Thief extends Player {
 
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 12px monospace';
-    ctx.fillText('THIEF (Arrows + Enter)', barX, barY + 24);
+    ctx.fillText('THIEF', barX, barY + 24);
   }
 }
 
-// Helper to check if standing up is blocked
+// Helper
 function checkStandCollision(box: AABB, grid: number[][], solidTypes: Set<number>): boolean {
   const startCol = Math.floor(box.x / TILE_SIZE);
   const endCol = Math.floor((box.x + box.width - 1) / TILE_SIZE);
   const startRow = Math.floor(box.y / TILE_SIZE);
   const endRow = Math.floor((box.y + box.height - 1) / TILE_SIZE);
-
   for (let row = startRow; row <= endRow; row++) {
     for (let col = startCol; col <= endCol; col++) {
       if (row >= 0 && row < grid.length && col >= 0 && col < (grid[0]?.length ?? 0)) {
@@ -587,6 +544,8 @@ function checkStandCollision(box: AABB, grid: number[][], solidTypes: Set<number
 export interface GameWorldState {
   leverPulled: boolean;
   bridgeActive: boolean;
+  knightOnButton: boolean;
+  thiefOnButton: boolean;
   crates: Crate[];
   topGrid: number[][];
   bottomGrid: number[][];
